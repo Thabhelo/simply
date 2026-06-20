@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>unfog</title>
+    <script type="module" src="/src/popup.ts"></script>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">unfog</p>
+      <h1>Unfog this paper</h1>
+      <p class="hint">
+        Open an arXiv paper, select a dense paragraph if needed, then generate a study guide.
+      </p>
+      <button id="analyze" type="button">Analyze current page</button>
+      <button id="download" type="button">Download guide PDF</button>
+      <section id="status" role="status">Waiting for a paper.</section>
+      <section id="results"></section>
+    </main>
+  </body>
+</html>
