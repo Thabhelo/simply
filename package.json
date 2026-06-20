@@ -1,5 +1,5 @@
 {
-  "name": "unfog",
+  "name": "simply",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -17,6 +17,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "framer-motion": "^12.40.0",
+    "lucide-react": "^1.21.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

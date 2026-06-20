@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "unfog",
-  "description": "Turn dense research papers into prerequisite math guides.",
+  "name": "Simply",
+  "description": "Turn dense research papers into calm prerequisite guides.",
   "version": "0.1.0",
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Unfog this paper"
+    "default_title": "Simply explain this paper"
   },
   "permissions": ["activeTab", "scripting"],
   "host_permissions": ["http://localhost:8787/*", "https://arxiv.org/*"],
