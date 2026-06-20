@@ -17,7 +17,7 @@ function getPaperText(): PaperPayload {
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message?.type !== 'UNFOG_COLLECT_PAPER') {
+  if (message?.type !== 'SIMPLY_COLLECT_PAPER') {
     return false
   }
 

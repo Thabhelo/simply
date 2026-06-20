@@ -1,16 +1,16 @@
-# unfog plan
+# Simply plan
 
 ## Product bet
 
 Research papers are intimidating because they compress years of math into symbols,
-jargon, and assumed background. Unfog is a Chrome extension that turns the paper you
+jargon, and assumed background. Simply is a Chrome extension that turns the paper you
 are reading into a short prerequisite guide: key terms, plain-English explanations,
 math concepts to review, and a generated PDF you can keep beside the paper.
 
 ## Name
 
-**unfog** means making a dense research paper clear enough to start reading. It is
-short, verb-like, easy to say, and available for the initial GitHub repo.
+**Simply** is short, calm, and easy to remember. It points at the job users want done:
+make the first pass through a dense research paper feel simpler.
 
 ## Target user
 
@@ -21,7 +21,7 @@ short, verb-like, easy to say, and available for the initial GitHub repo.
 ## MVP user flow
 
 1. User opens an arXiv PDF or abstract page.
-2. User clicks the Unfog Chrome extension.
+2. User clicks the Simply Chrome extension.
 3. Extension extracts page text, selected text, title, and URL.
 4. Backend identifies prerequisite concepts across probability, statistics, linear
    algebra, calculus, optimization, and ML jargon.

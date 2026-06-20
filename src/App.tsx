@@ -123,6 +123,10 @@ function App() {
             Get early access
             <ArrowUpRight size={15} />
           </a>
+          <a className="button secondary" href="/simply-chrome-extension.zip" download>
+            Download Chrome extension
+            <Download size={15} />
+          </a>
           <a className="button secondary" href="https://arxiv.org/pdf/1606.08415v3" target="_blank">
             Try the demo paper
           </a>
@@ -265,6 +269,10 @@ function App() {
               <Check size={15} />
             </button>
           </form>
+          <a className="button secondary download-link" href="/simply-chrome-extension.zip" download>
+            Download Chrome extension
+            <Download size={15} />
+          </a>
         </div>
       </section>
     </main>

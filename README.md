@@ -1,6 +1,6 @@
-# unfog
+# Simply
 
-Unfog is a Chrome extension and web app for turning dense research papers into
+Simply is a Chrome extension and web app for turning dense research papers into
 beginner-friendly prerequisite guides. It starts with arXiv papers and produces a
 compact guide to the probability, statistics, linear algebra, calculus, optimization,
 and ML jargon needed to read the paper.
@@ -34,7 +34,7 @@ Then open Chrome:
 2. Enable Developer Mode.
 3. Click “Load unpacked”.
 4. Select `apps/extension/dist`.
-5. Open an arXiv paper and click the Unfog extension.
+5. Open an arXiv paper and click the Simply extension.
 
 For the first starter, selected text works best on PDF pages. Backend PDF ingestion is
 planned next so direct arXiv PDF URLs can be parsed reliably.

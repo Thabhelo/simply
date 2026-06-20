@@ -134,7 +134,7 @@
   color: #111;
   display: flex;
   flex-wrap: wrap;
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Inter Tight', sans-serif;
   font-size: clamp(48px, 7vw, 76px);
   font-weight: 300;
   gap: 0 0.22em;
@@ -159,7 +159,9 @@
 }
 
 .hero-actions {
+  align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   justify-content: center;
   margin-top: 30px;
@@ -586,6 +588,11 @@
   gap: 10px;
   justify-content: center;
   margin-top: 28px;
+}
+
+.download-link {
+  justify-content: center;
+  margin-top: 14px;
 }
 
 .early-card input {

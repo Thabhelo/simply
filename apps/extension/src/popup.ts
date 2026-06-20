@@ -49,7 +49,7 @@ async function collectPaper(): Promise<PaperPayload> {
 
   try {
     const response = (await chrome.tabs.sendMessage(tab.id, {
-      type: 'UNFOG_COLLECT_PAPER',
+      type: 'SIMPLY_COLLECT_PAPER',
     })) as PaperPayload | undefined
 
     if (response?.text) {
@@ -63,7 +63,7 @@ async function collectPaper(): Promise<PaperPayload> {
   }
 
   const response = (await chrome.tabs.sendMessage(tab.id, {
-    type: 'UNFOG_COLLECT_PAPER',
+    type: 'SIMPLY_COLLECT_PAPER',
   })) as PaperPayload | undefined
 
   if (!response?.text) {

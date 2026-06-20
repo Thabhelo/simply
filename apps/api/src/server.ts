@@ -87,7 +87,7 @@ function analyzePaper(input: z.infer<typeof analysisRequestSchema>) {
     title: input.title?.trim() || 'Untitled research paper',
     url: input.url,
     summary:
-      'Unfog found the prerequisite math and ML ideas that are likely to block a first pass through this paper.',
+      'Simply found the prerequisite math and ML ideas that are likely to block a first pass through this paper.',
     concepts: fallback.map(({ area, term, whyItMatters, plainEnglish }) => ({
       area,
       term,
@@ -104,7 +104,7 @@ function analyzePaper(input: z.infer<typeof analysisRequestSchema>) {
 }
 
 app.get('/health', (_request, response) => {
-  response.json({ ok: true, service: 'unfog-api' })
+  response.json({ ok: true, service: 'simply-api' })
 })
 
 app.post('/api/analyze', (request, response) => {
@@ -130,10 +130,10 @@ app.post('/api/report.pdf', (request, response) => {
   const document = new PDFDocument({ margin: 48 })
 
   response.setHeader('Content-Type', 'application/pdf')
-  response.setHeader('Content-Disposition', 'attachment; filename="unfog-guide.pdf"')
+  response.setHeader('Content-Disposition', 'attachment; filename="simply-guide.pdf"')
   document.pipe(response)
 
-  document.fontSize(26).text(`Unfog Guide: ${report.title}`, { lineGap: 8 })
+  document.fontSize(26).text(`Simply Guide: ${report.title}`, { lineGap: 8 })
   document.moveDown()
   document.fontSize(12).fillColor('#475467').text(report.summary)
   document.moveDown()
@@ -152,5 +152,5 @@ app.post('/api/report.pdf', (request, response) => {
 })
 
 app.listen(port, () => {
-  console.log(`unfog API listening on http://localhost:${port}`)
+  console.log(`Simply API listening on http://localhost:${port}`)
 })
