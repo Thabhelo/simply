@@ -103,8 +103,7 @@
 
 .nav-button:hover,
 .button:hover,
-.step-card:hover,
-.weekend-grid article:hover {
+.step-card:hover {
   transform: translateY(-2px);
 }
 
@@ -156,6 +155,19 @@
   line-height: 1.7;
   margin: 24px auto 0;
   max-width: 650px;
+}
+
+.brand-word {
+  color: #111;
+  font-weight: 500;
+}
+
+.brand-word sup {
+  font-size: 9px;
+  line-height: 0;
+  margin-left: 1px;
+  position: relative;
+  top: -0.45em;
 }
 
 .hero-actions {
@@ -220,7 +232,6 @@
 .step-card,
 .guide-card,
 .guide-preview,
-.weekend-grid article,
 .early-card {
   backdrop-filter: blur(40px);
   background: rgba(255, 255, 255, 0.84);
@@ -337,8 +348,7 @@
 
 .reader-output h3,
 .guide-row h3,
-.step-card h3,
-.weekend-grid h3 {
+.step-card h3 {
   color: #111;
   font-family: 'Bricolage Grotesque', sans-serif;
   font-weight: 400;
@@ -355,7 +365,6 @@
 .step-card p,
 .guide-copy p,
 .guide-row p,
-.weekend-grid p,
 .early-card p {
   color: rgba(0, 0, 0, 0.55);
   font-size: 14px;
@@ -395,7 +404,6 @@
 
 .reader-section,
 .guide-section,
-.weekend-section,
 .early-section {
   margin: 0 auto;
   max-width: 1180px;
@@ -428,23 +436,20 @@
   max-width: 650px;
 }
 
-.steps-grid,
-.weekend-grid {
+.steps-grid {
   display: grid;
   gap: 24px;
   grid-template-columns: repeat(3, 1fr);
 }
 
-.step-card,
-.weekend-grid article {
+.step-card {
   padding: 24px;
   transition:
     box-shadow 250ms ease,
     transform 250ms ease;
 }
 
-.step-card:hover,
-.weekend-grid article:hover {
+.step-card:hover {
   box-shadow: 0 24px 56px rgba(15, 23, 42, 0.12);
 }
 
@@ -534,21 +539,6 @@
 .guide-row h3 {
   font-size: 22px;
   margin-top: 6px;
-}
-
-.weekend-grid article {
-  min-height: 210px;
-}
-
-.weekend-grid span {
-  color: rgba(232, 100, 42, 0.72);
-  font-family: 'Bricolage Grotesque', sans-serif;
-  font-size: 13px;
-}
-
-.weekend-grid h3 {
-  font-size: 28px;
-  margin-top: 28px;
 }
 
 .early-section {
@@ -651,8 +641,7 @@
 
   .hero-product,
   .steps-grid,
-  .guide-card,
-  .weekend-grid {
+  .guide-card {
     grid-template-columns: 1fr;
   }
 
@@ -662,7 +651,6 @@
 
   .reader-section,
   .guide-section,
-  .weekend-section,
   .early-section {
     padding: 72px 24px;
   }
@@ -709,7 +697,6 @@
 
   .reader-section,
   .guide-section,
-  .weekend-section,
   .early-section {
     padding-left: 16px;
     padding-right: 16px;

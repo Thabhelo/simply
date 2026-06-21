@@ -3,7 +3,7 @@ import './style.css'
 type PaperPayload = {
   title: string
   url: string
-  text: string
+  text?: string
 }
 
 type Concept = {
@@ -56,21 +56,36 @@ async function collectPaper(): Promise<PaperPayload> {
       return response
     }
   } catch {
-    await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      files: ['content.js'],
-    })
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js'],
+      })
+    } catch {
+      if (tab.url) {
+        return {
+          title: tab.title || 'Untitled research paper',
+          url: tab.url,
+        }
+      }
+    }
   }
 
   const response = (await chrome.tabs.sendMessage(tab.id, {
     type: 'SIMPLY_COLLECT_PAPER',
   })) as PaperPayload | undefined
 
-  if (!response?.text) {
-    throw new Error('Could not read this page. Try selecting text in the paper first.')
+  const url = response?.url || tab.url
+
+  if (!url) {
+    throw new Error('Could not read this page. Try opening an arXiv paper or selecting text first.')
   }
 
-  return response
+  return {
+    title: response?.title || tab.title || 'Untitled research paper',
+    url,
+    text: response?.text,
+  }
 }
 
 function renderAnalysis(analysis: AnalysisResponse) {

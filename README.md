@@ -36,10 +36,33 @@ Then open Chrome:
 4. Select `apps/extension/dist`.
 5. Open an arXiv paper and click the Simply extension.
 
-For the first starter, selected text works best on PDF pages. Backend PDF ingestion is
-planned next so direct arXiv PDF URLs can be parsed reliably.
+The extension runs on research-looking webpages and shows a small Simply widget when it
+detects paper metadata, a known research host, an abstract, or a PDF-like page. If Chrome
+blocks direct text access, the extension can fall back to URL-based backend ingestion.
 
 ## API demo
+
+Ingest an arXiv URL, direct PDF URL, or research-paper webpage:
+
+```bash
+curl -X POST http://localhost:8787/api/ingest \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://aclanthology.org/2020.acl-main.447/"
+  }'
+```
+
+Analyze by URL only:
+
+```bash
+curl -X POST http://localhost:8787/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://arxiv.org/pdf/1606.08415v3"
+  }'
+```
+
+Analyze selected or pasted text:
 
 ```bash
 curl -X POST http://localhost:8787/api/analyze \

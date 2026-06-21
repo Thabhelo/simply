@@ -71,7 +71,6 @@ function App() {
             Reader
           </a>
           <a href="#guide">Guide</a>
-          <a href="#weekend">Build</a>
           <a href="#early">Early access</a>
         </div>
         <a className="nav-button" href="#early">
@@ -109,8 +108,12 @@ function App() {
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
           transition={{ duration: 0.8, delay: 0.32, ease }}
         >
-          Simply turns intimidating machine learning papers into a small prerequisite guide:
-          the terms to know, the math to refresh, and the parts worth reading first.
+          <span className="brand-word">
+            Simply<sup>TM</sup>
+          </span>{' '}
+          analyzes the research paper you are reading, then builds a calm guide to the
+          calculus, linear algebra, statistics, notation, and background knowledge you need
+          to navigate it.
         </motion.p>
 
         <motion.div
@@ -223,30 +226,6 @@ function App() {
               </article>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section className="weekend-section" id="weekend">
-        <div className="section-heading narrow">
-          <p className="tiny-pill">Weekend build</p>
-          <h2>Small enough to ship. Useful enough to charge for.</h2>
-        </div>
-        <div className="weekend-grid">
-          <article>
-            <span>01</span>
-            <h3>Chrome reader</h3>
-            <p>Capture the active paper, selected text, title, and source URL.</p>
-          </article>
-          <article>
-            <span>02</span>
-            <h3>Prerequisite guide</h3>
-            <p>Explain the background math and terms without turning it into another paper.</p>
-          </article>
-          <article>
-            <span>03</span>
-            <h3>PDF export</h3>
-            <p>Save a quiet guide to read next to arXiv, textbooks, or class notes.</p>
-          </article>
         </div>
       </section>
 
