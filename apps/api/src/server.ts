@@ -21,6 +21,11 @@ const maxDetectChars = 14_000
 
 const apiKey = process.env.ANTHROPIC_API_KEY
 const anthropic = apiKey ? new Anthropic({ apiKey }) : null
+console.log(
+  anthropic
+    ? `Simply: AI mode enabled (${DETECT_MODEL})`
+    : 'Simply: ANTHROPIC_API_KEY not set — running in basic mode',
+)
 
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
@@ -336,7 +341,10 @@ const maxCacheEntries = 200
 
 async function aiMode(paper: ResolvedPaper): Promise<AnalysisResult> {
   const prereqs = await detectPrerequisites(paper)
-  if (prereqs.length === 0) return basicMode(paper) // nothing detected -> basic
+  if (prereqs.length === 0) {
+    console.warn('Simply: detect returned no prerequisites — using basic mode')
+    return basicMode(paper) // nothing detected -> basic
+  }
   const lessons = await teachAll(prereqs, paper.title)
   return {
     title: paper.title?.trim() || 'Untitled research paper',
@@ -364,7 +372,8 @@ async function analyzePaper(paper: ResolvedPaper): Promise<AnalysisResult> {
       analysisCache.set(key, result) // only cache ai results, never basic
     }
     return result
-  } catch {
+  } catch (error) {
+    console.error('Simply: AI analysis failed — using basic mode:', error instanceof Error ? error.message : error)
     return basicMode(paper)
   }
 }
@@ -394,7 +403,10 @@ async function detectPrerequisites(paper: ResolvedPaper): Promise<Prerequisite[]
     messages: [{ role: 'user', content: input }],
   })
   const parsed = response.parsed_output
-  if (!parsed) return []
+  if (!parsed) {
+    console.warn('Simply: detect parse returned no structured output')
+    return []
+  }
   // AREAS filter is redundant with the schema enum (defensive only); slice enforces the lesson cap
   return parsed.prerequisites.filter((p) => AREAS.includes(p.area)).slice(0, maxLessons)
 }
