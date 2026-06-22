@@ -6,17 +6,22 @@ type PaperPayload = {
   text?: string
 }
 
-type Concept = {
+type Lesson = {
   area: string
-  term: string
-  whyItMatters: string
-  plainEnglish: string
+  concept: string
+  title: string
+  intuition: string
+  formula?: string
+  example: string
+  inThisPaper: string
 }
 
 type AnalysisResponse = {
   title: string
   summary: string
-  concepts: Concept[]
+  mode?: 'ai' | 'basic'
+  lessons?: Lesson[]
+  concepts: { area: string; term: string; whyItMatters: string; plainEnglish: string }[]
   nextSteps: string[]
 }
 
@@ -89,28 +94,27 @@ async function collectPaper(): Promise<PaperPayload> {
 }
 
 function renderAnalysis(analysis: AnalysisResponse) {
-  if (!resultsEl) {
-    return
-  }
-
+  if (!resultsEl) return
+  const lessons = analysis.lessons ?? []
+  const badge = analysis.mode === 'basic' ? '<span class="mode-badge">Basic mode</span>' : ''
   resultsEl.innerHTML = `
-    <h2>${analysis.title}</h2>
+    <div class="result-head"><h2>${analysis.title}</h2>${badge}</div>
     <p>${analysis.summary}</p>
-    <div class="concepts">
-      ${analysis.concepts
+    <div class="lessons">
+      ${lessons
         .map(
-          (concept) => `
-            <article>
-              <span>${concept.area}</span>
-              <h3>${concept.term}</h3>
-              <p>${concept.plainEnglish}</p>
-              <small>${concept.whyItMatters}</small>
-            </article>
-          `,
+          (l) => `
+            <article class="lesson">
+              <span>${l.area}</span>
+              <h3>${l.title}</h3>
+              <p>${l.intuition}</p>
+              ${l.formula ? `<code class="formula">${l.formula}</code>` : ''}
+              ${l.example ? `<p class="example">${l.example}</p>` : ''}
+              <small>${l.inThisPaper}</small>
+            </article>`,
         )
         .join('')}
-    </div>
-  `
+    </div>`
 }
 
 async function analyzeCurrentPage() {
