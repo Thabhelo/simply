@@ -364,6 +364,45 @@ async function detectPrerequisites(paper: ResolvedPaper): Promise<Prerequisite[]
   return parsed.prerequisites.filter((p) => AREAS.includes(p.area)).slice(0, maxLessons)
 }
 
+const lessonSchema = z.object({
+  area: z.enum(AREAS as [Area, ...Area[]]),
+  concept: z.string(),
+  title: z.string(),
+  intuition: z.string(),
+  formula: z.string().optional(),
+  example: z.string(),
+  inThisPaper: z.string(),
+})
+
+async function generateLesson(p: Prerequisite, paperTitle: string): Promise<Lesson> {
+  if (!anthropic) throw new Error('no client')
+  const response = await anthropic.messages.parse({
+    model: TEACH_MODEL,
+    max_tokens: 800,
+    system:
+      'Write a compact refresher lesson for someone about to read a research paper. A few sentences of intuition, one key formula if there is one, one short worked example, and one line on how the concept shows up in this paper. Calm and clear — a refresher, not a textbook chapter.',
+    output_config: { format: zodOutputFormat(lessonSchema) },
+    messages: [
+      {
+        role: 'user',
+        content: `Concept: ${p.concept}\nArea: ${p.area}\nPaper: ${paperTitle}\nThe paper assumes (evidence): "${p.evidenceQuote}"\nWhy the reader needs it: ${p.whyAssumed}`,
+      },
+    ],
+  })
+  const lesson = response.parsed_output
+  if (!lesson) throw new Error('empty lesson')
+  return lesson
+}
+
+async function teachAll(prereqs: Prerequisite[], paperTitle: string): Promise<Lesson[]> {
+  const settled = await Promise.allSettled(prereqs.map((p) => generateLesson(p, paperTitle)))
+  return settled.map((res, i) => {
+    if (res.status === 'fulfilled') return res.value
+    const p = prereqs[i]
+    return { area: p.area, concept: p.concept, title: p.concept, intuition: p.whyAssumed, example: '', inThisPaper: p.evidenceQuote || p.whyAssumed }
+  })
+}
+
 app.get('/health', (_request, response) => {
   response.json({ ok: true, service: 'simply-api' })
 })
