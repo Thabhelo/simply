@@ -5,9 +5,10 @@ import { PDFParse } from 'pdf-parse'
 import PDFDocument from 'pdfkit'
 import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
+import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { AREAS, maxLessons } from './types.js'
 import type { Area, Prerequisite, Lesson, ConceptCard, AnalysisResult } from './types.js'
-import { detectBasic, lessonsFromBasic, projectConcepts, nextSteps } from './analysis.js'
+import { buildDetectInput, detectBasic, lessonsFromBasic, projectConcepts, nextSteps } from './analysis.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
@@ -332,6 +333,35 @@ function basicMode(paper: ResolvedPaper): AnalysisResult {
 
 function analyzePaper(input: ResolvedPaper) {
   return basicMode(input)
+}
+
+const prereqSchema = z.object({
+  prerequisites: z.array(
+    z.object({
+      area: z.enum(AREAS as [Area, ...Area[]]),
+      concept: z.string(),
+      evidenceQuote: z.string(),
+      whyAssumed: z.string(),
+    }),
+  ),
+})
+
+const DETECT_SYSTEM =
+  'You help a reader who is about to read a research paper. List the prerequisite math and ML concepts the paper assumes the reader already knows. For each, quote the exact span from the provided text that shows the assumption. Only list concepts that actually appear — never invent. Order by how much each blocks a first pass. List at most 6.'
+
+async function detectPrerequisites(paper: ResolvedPaper): Promise<Prerequisite[]> {
+  if (!anthropic) return []
+  const input = buildDetectInput(paper.title, paper.text, maxDetectChars)
+  const response = await anthropic.messages.parse({
+    model: DETECT_MODEL,
+    max_tokens: 1500,
+    system: DETECT_SYSTEM,
+    output_config: { format: zodOutputFormat(prereqSchema) },
+    messages: [{ role: 'user', content: input }],
+  })
+  const parsed = response.parsed_output
+  if (!parsed) return []
+  return parsed.prerequisites.filter((p) => AREAS.includes(p.area)).slice(0, maxLessons)
 }
 
 app.get('/health', (_request, response) => {
