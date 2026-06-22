@@ -354,13 +354,14 @@ async function detectPrerequisites(paper: ResolvedPaper): Promise<Prerequisite[]
   const input = buildDetectInput(paper.title, paper.text, maxDetectChars)
   const response = await anthropic.messages.parse({
     model: DETECT_MODEL,
-    max_tokens: 1500,
+    max_tokens: 2500, // headroom for up to 6 prerequisites with verbatim evidence quotes; truncation -> null parse -> lost detect
     system: DETECT_SYSTEM,
     output_config: { format: zodOutputFormat(prereqSchema) },
     messages: [{ role: 'user', content: input }],
   })
   const parsed = response.parsed_output
   if (!parsed) return []
+  // AREAS filter is redundant with the schema enum (defensive only); slice enforces the lesson cap
   return parsed.prerequisites.filter((p) => AREAS.includes(p.area)).slice(0, maxLessons)
 }
 
