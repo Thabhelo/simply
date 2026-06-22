@@ -535,6 +535,10 @@ app.post('/api/report.pdf', async (request, response) => {
     report.nextSteps.forEach((step) => document.fillColor('#344054').fontSize(12).text(`- ${step}`))
     document.end()
   } catch (error) {
+    if (response.headersSent) {
+      response.end() // streaming already started; cannot send a 422 body
+      return
+    }
     response.status(422).json({
       error: error instanceof Error ? error.message : 'Could not generate a report for this paper.',
     })
