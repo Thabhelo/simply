@@ -8,7 +8,7 @@ import Anthropic from '@anthropic-ai/sdk'
 import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
 import { AREAS, maxLessons } from './types.js'
 import type { Area, Prerequisite, Lesson, ConceptCard, AnalysisResult } from './types.js'
-import { buildDetectInput, detectBasic, lessonsFromBasic, projectConcepts, nextSteps } from './analysis.js'
+import { buildDetectInput, detectBasic, lessonsFromBasic, projectConcepts, nextSteps, cacheKey } from './analysis.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
@@ -331,8 +331,42 @@ function basicMode(paper: ResolvedPaper): AnalysisResult {
   }
 }
 
-function analyzePaper(input: ResolvedPaper) {
-  return basicMode(input)
+const analysisCache = new Map<string, AnalysisResult>()
+const maxCacheEntries = 200
+
+async function aiMode(paper: ResolvedPaper): Promise<AnalysisResult> {
+  const prereqs = await detectPrerequisites(paper)
+  if (prereqs.length === 0) return basicMode(paper) // nothing detected -> basic
+  const lessons = await teachAll(prereqs, paper.title)
+  return {
+    title: paper.title?.trim() || 'Untitled research paper',
+    url: paper.url,
+    summary: 'Simply built short refresher lessons for the prerequisite ideas this paper assumes.',
+    mode: 'ai',
+    lessons,
+    concepts: projectConcepts(lessons),
+    nextSteps,
+  }
+}
+
+async function analyzePaper(paper: ResolvedPaper): Promise<AnalysisResult> {
+  if (!anthropic) return basicMode(paper)
+  const key = cacheKey(paper.title, paper.url, paper.text)
+  const cached = analysisCache.get(key)
+  if (cached) return cached
+  try {
+    const result = await aiMode(paper)
+    if (result.mode === 'ai') {
+      if (analysisCache.size >= maxCacheEntries) {
+        const oldest = analysisCache.keys().next().value
+        if (oldest !== undefined) analysisCache.delete(oldest) // FIFO evict; guard satisfies strict types
+      }
+      analysisCache.set(key, result) // only cache ai results, never basic
+    }
+    return result
+  } catch {
+    return basicMode(paper)
+  }
 }
 
 const prereqSchema = z.object({
@@ -445,9 +479,10 @@ app.post('/api/analyze', async (request, response) => {
 
   try {
     const paper = await resolvePaperInput(parsed.data)
+    const analysis = await analyzePaper(paper)
 
     response.json({
-      ...analyzePaper(paper),
+      ...analysis,
       ingestion: {
         source: paper.source,
         textLength: paper.text.length,
@@ -472,23 +507,27 @@ app.post('/api/report.pdf', async (request, response) => {
 
   try {
     const paper = await resolvePaperInput(parsed.data)
-    const report = analyzePaper(paper)
+    const report = await analyzePaper(paper)
     const document = new PDFDocument({ margin: 48 })
-
     response.setHeader('Content-Type', 'application/pdf')
     response.setHeader('Content-Disposition', 'attachment; filename="simply-guide.pdf"')
     document.pipe(response)
 
-    document.fontSize(26).text(`Simply Guide: ${report.title}`, { lineGap: 8 })
+    document.fontSize(26).fillColor('#101827').text(`Simply Guide: ${report.title}`, { lineGap: 8 })
     document.moveDown()
-    document.fontSize(12).fillColor('#475467').text(report.summary)
+    document.fontSize(12).fillColor('#667085').text(report.summary)
+    if (report.mode === 'basic') {
+      document.moveDown(0.5).fontSize(10).fillColor('#c24a1a').text('Basic mode — set ANTHROPIC_API_KEY for full AI lessons.')
+    }
     document.moveDown()
 
-    report.concepts.forEach((concept, index) => {
-      document.fillColor('#101827').fontSize(16).text(`${index + 1}. ${concept.term}`)
-      document.fillColor('#5b4bff').fontSize(10).text(concept.area.toUpperCase())
-      document.fillColor('#344054').fontSize(12).text(`Why it matters: ${concept.whyItMatters}`)
-      document.text(`Plain English: ${concept.plainEnglish}`)
+    report.lessons.forEach((lesson, index) => {
+      document.fillColor('#5b4bff').fontSize(10).text(lesson.area.toUpperCase())
+      document.fillColor('#101827').fontSize(16).text(`${index + 1}. ${lesson.title}`)
+      document.fillColor('#344054').fontSize(12).text(lesson.intuition)
+      if (lesson.formula) document.fillColor('#101827').fontSize(11).text(`Formula: ${lesson.formula}`)
+      if (lesson.example) document.fillColor('#344054').fontSize(12).text(`Example: ${lesson.example}`)
+      document.fillColor('#667085').fontSize(11).text(`In this paper: ${lesson.inThisPaper}`)
       document.moveDown()
     })
 
