@@ -73,3 +73,15 @@ curl -X POST http://localhost:8787/api/analyze \
     "text": "dropout variational inference KL divergence gradient sampling"
   }'
 ```
+
+## AI analysis
+
+Set an Anthropic API key to get full prerequisite lessons:
+
+```bash
+echo "ANTHROPIC_API_KEY=sk-ant-..." > apps/api/.env
+```
+
+Without a key, the API runs in **basic mode** (deterministic regex concept
+detection) so the demo still works offline. Each analysis is cached in memory
+per paper, so repeat requests for the same paper are instant.
