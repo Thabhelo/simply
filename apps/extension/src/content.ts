@@ -88,12 +88,10 @@ function getPaperText(): PaperPayload {
   }
 }
 
-function renderLessonList(lessons: AnalysisResponse['lessons']) {
+function renderLessonTeaser(lessons: AnalysisResponse['lessons']) {
   return (lessons ?? [])
-    .slice(0, 4)
-    .map(
-      (l) => `<li><span>${l.area}</span><strong>${l.title}</strong><em>${l.intuition}</em></li>`,
-    )
+    .slice(0, 3)
+    .map((l) => `<li><span>${l.area}</span><strong>${l.title}</strong></li>`)
     .join('')
 }
 
@@ -128,6 +126,8 @@ function mountWidget() {
         position: fixed;
         right: 24px;
         width: 320px;
+        max-height: min(72vh, 600px);
+        overflow-y: auto;
         z-index: 2147483647;
       }
 
@@ -161,16 +161,22 @@ function mountWidget() {
       }
 
       p, .status {
-        color: rgba(0, 0, 0, 0.58);
-        font-size: 13px;
-        line-height: 1.45;
+        color: rgba(0, 0, 0, 0.62);
+        font-size: 14px;
+        line-height: 1.5;
         margin: 0;
       }
 
       .actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 8px;
         margin-top: 14px;
+      }
+
+      .open {
+        margin-top: 12px;
+        width: 100%;
       }
 
       button {
@@ -205,29 +211,23 @@ function mountWidget() {
         background: rgba(0, 0, 0, 0.035);
         border-radius: 12px;
         color: #111;
-        font-size: 13px;
-        padding: 9px 10px;
+        padding: 10px 12px;
       }
 
       li span {
-        color: rgba(0, 0, 0, 0.48);
+        color: #5b4bff;
         display: block;
-        font-size: 10px;
-        margin-bottom: 3px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        margin-bottom: 4px;
         text-transform: uppercase;
       }
 
       li strong {
         display: block;
-        font-size: 13px;
-      }
-
-      li em {
-        color: rgba(0, 0, 0, 0.55);
-        display: block;
-        font-size: 12px;
-        font-style: normal;
-        margin-top: 3px;
+        font-size: 14px;
+        font-weight: 600;
       }
 
       @keyframes slide-in {
@@ -255,6 +255,7 @@ function mountWidget() {
       </div>
       <div class="status" id="simply-status"></div>
       <ul id="simply-results"></ul>
+      <button class="primary open" id="simply-open" type="button" hidden>Open full guide (PDF) ↗</button>
     </section>
   `
 
@@ -262,24 +263,31 @@ function mountWidget() {
 
   const analyzeButton = shadow.querySelector<HTMLButtonElement>('#simply-analyze')
   const dismissButton = shadow.querySelector<HTMLButtonElement>('#simply-dismiss')
+  const openButton = shadow.querySelector<HTMLButtonElement>('#simply-open')
   const statusEl = shadow.querySelector<HTMLElement>('#simply-status')
   const resultsEl = shadow.querySelector<HTMLElement>('#simply-results')
 
+  let lastPayload: PaperPayload | null = null
+
   dismissButton?.addEventListener('click', () => host.remove())
+
   analyzeButton?.addEventListener('click', async () => {
-    if (!statusEl || !resultsEl || !analyzeButton) {
+    if (!statusEl || !resultsEl || !analyzeButton || !openButton) {
       return
     }
 
     analyzeButton.disabled = true
+    openButton.hidden = true
     statusEl.textContent = 'Reading the paper...'
     resultsEl.innerHTML = ''
 
     try {
+      const payload = getPaperText()
+      lastPayload = payload
       const response = await fetch(`${apiBase}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(getPaperText()),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -287,13 +295,48 @@ function mountWidget() {
       }
 
       const analysis = (await response.json()) as AnalysisResponse
-      statusEl.textContent = `Found ${(analysis.lessons ?? []).length} prerequisite lessons.`
-      resultsEl.innerHTML = renderLessonList(analysis.lessons)
+      const count = (analysis.lessons ?? []).length
+      statusEl.textContent = count
+        ? `Found ${count} prerequisite ideas. Open the full guide for the lessons.`
+        : 'No prerequisites detected for this page.'
+      resultsEl.innerHTML = renderLessonTeaser(analysis.lessons)
+      openButton.hidden = count === 0
     } catch (error) {
       statusEl.textContent =
         error instanceof Error ? error.message : 'Could not reach the Simply API.'
     } finally {
       analyzeButton.disabled = false
+    }
+  })
+
+  openButton?.addEventListener('click', async () => {
+    if (!statusEl || !openButton) {
+      return
+    }
+
+    const payload = lastPayload ?? getPaperText()
+    openButton.disabled = true
+    statusEl.textContent = 'Building the full guide...'
+
+    try {
+      const response = await fetch(`${apiBase}/api/report.pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+
+      if (!response.ok) {
+        throw new Error('Could not generate the guide PDF.')
+      }
+
+      const blobUrl = URL.createObjectURL(await response.blob())
+      window.open(blobUrl, '_blank', 'noopener')
+      statusEl.textContent = 'Opened the full guide in a new tab.'
+    } catch (error) {
+      statusEl.textContent =
+        error instanceof Error ? error.message : 'Could not open the guide.'
+    } finally {
+      openButton.disabled = false
     }
   })
 }
