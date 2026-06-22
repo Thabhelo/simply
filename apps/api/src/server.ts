@@ -7,6 +7,7 @@ import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
 import { AREAS } from './types.js'
 import type { Area, Prerequisite, Lesson, ConceptCard, AnalysisResult } from './types.js'
+import { detectBasic, lessonsFromBasic, projectConcepts, nextSteps } from './analysis.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
@@ -50,66 +51,6 @@ type ResolvedPaper = {
   arxivId?: string
   pdfUrl?: string
 }
-
-type Concept = {
-  area: 'Probability' | 'Statistics' | 'Linear algebra' | 'Calculus' | 'Optimization' | 'ML'
-  term: string
-  whyItMatters: string
-  plainEnglish: string
-  triggers: RegExp[]
-}
-
-const concepts: Concept[] = [
-  {
-    area: 'Probability',
-    term: 'Bayesian inference',
-    whyItMatters: 'Many ML papers model uncertainty by updating beliefs after seeing data.',
-    plainEnglish: 'Start with a belief, observe evidence, and revise the belief.',
-    triggers: [/bayes/i, /posterior/i, /prior/i],
-  },
-  {
-    area: 'Probability',
-    term: 'KL divergence',
-    whyItMatters: 'It appears when papers compare an approximate distribution with a target distribution.',
-    plainEnglish: 'A one-way penalty for how poorly one probability distribution imitates another.',
-    triggers: [/kl divergence/i, /kullback/i, /relative entropy/i],
-  },
-  {
-    area: 'Statistics',
-    term: 'Monte Carlo estimation',
-    whyItMatters: 'Papers use sampling when exact expectations are too expensive to compute.',
-    plainEnglish: 'Estimate a hard average by drawing many random examples and averaging them.',
-    triggers: [/monte carlo/i, /sampling/i, /sampled/i],
-  },
-  {
-    area: 'Linear algebra',
-    term: 'Vectors and matrices',
-    whyItMatters: 'Model inputs, weights, embeddings, and transformations are usually matrix-shaped.',
-    plainEnglish: 'Vectors store lists of numbers; matrices transform those lists into new lists.',
-    triggers: [/matrix/i, /matrices/i, /vector/i, /linear/i],
-  },
-  {
-    area: 'Calculus',
-    term: 'Gradient',
-    whyItMatters: 'Gradients tell learning algorithms which direction changes the loss fastest.',
-    plainEnglish: 'A gradient is a slope for many variables at once.',
-    triggers: [/gradient/i, /derivative/i, /differentiat/i],
-  },
-  {
-    area: 'Optimization',
-    term: 'Variational inference',
-    whyItMatters: 'It turns an impossible inference problem into a trainable optimization problem.',
-    plainEnglish: 'Pick a simpler family of distributions and tune it until it mimics the hard one.',
-    triggers: [/variational/i, /evidence lower bound/i, /\belbo\b/i],
-  },
-  {
-    area: 'ML',
-    term: 'Dropout',
-    whyItMatters: 'Dropout is a regularization method that also connects to uncertainty estimates.',
-    plainEnglish: 'Randomly hide parts of a neural network during training so it learns robust patterns.',
-    triggers: [/dropout/i, /regulari[sz]ation/i],
-  },
-]
 
 function normalizeWhitespace(text: string) {
   return text.replace(/\s+/g, ' ').trim().slice(0, maxTextLength)
@@ -379,31 +320,19 @@ async function resolvePaperInput(input: PaperRequest): Promise<ResolvedPaper> {
   }
 }
 
-function analyzePaper(input: ResolvedPaper) {
-  const normalizedText = `${input.title ?? ''}\n${input.url ?? ''}\n${input.text}`
-  const detected = concepts.filter((concept) =>
-    concept.triggers.some((trigger) => trigger.test(normalizedText)),
-  )
-  const fallback = detected.length > 0 ? detected : concepts.slice(0, 4)
-
+function basicMode(paper: ResolvedPaper): AnalysisResult {
+  const haystack = `${paper.title}\n${paper.url ?? ''}\n${paper.text}`
+  const lessons = lessonsFromBasic(detectBasic(haystack))
   return {
-    title: input.title?.trim() || 'Untitled research paper',
-    url: input.url,
-    summary:
-      'Simply found the prerequisite math and ML ideas that are likely to block a first pass through this paper.',
-    concepts: fallback.map(({ area, term, whyItMatters, plainEnglish }) => ({
-      area,
-      term,
-      whyItMatters,
-      plainEnglish,
-    })),
-    nextSteps: [
-      'Read the abstract and introduction once without stopping.',
-      'Review the prerequisite concepts below for 20 minutes.',
-      'Return to the methods section and annotate every symbol that repeats.',
-      'Export this guide as a PDF and keep it beside the paper.',
-    ],
+    title: paper.title?.trim() || 'Untitled research paper',
+    url: paper.url,
+    summary: 'Simply found the prerequisite math and ML ideas that are likely to block a first pass through this paper.',
+    mode: 'basic', lessons, concepts: projectConcepts(lessons), nextSteps,
   }
+}
+
+function analyzePaper(input: ResolvedPaper) {
+  return basicMode(input)
 }
 
 app.get('/health', (_request, response) => {
