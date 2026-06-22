@@ -4,11 +4,22 @@ import express from 'express'
 import { PDFParse } from 'pdf-parse'
 import PDFDocument from 'pdfkit'
 import { z } from 'zod'
+import Anthropic from '@anthropic-ai/sdk'
+import { AREAS } from './types.js'
+import type { Area, Prerequisite, Lesson, ConceptCard, AnalysisResult } from './types.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
 const maxTextLength = 120_000
 const maxPdfBytes = 25 * 1024 * 1024
+
+const DETECT_MODEL = 'claude-haiku-4-5'
+const TEACH_MODEL = 'claude-haiku-4-5'
+const maxDetectChars = 14_000
+const maxLessons = 6
+
+const apiKey = process.env.ANTHROPIC_API_KEY
+const anthropic = apiKey ? new Anthropic({ apiKey }) : null
 
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
