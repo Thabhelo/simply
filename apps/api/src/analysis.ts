@@ -1,5 +1,8 @@
 import { createHash } from 'node:crypto'
+import { maxLessons } from './types.js'
 import type { Area, Prerequisite, Lesson, ConceptCard } from './types.js'
+
+const basicFallbackCount = 4 // when nothing matches, show a few generic starters
 
 type Concept = {
   area: Area
@@ -63,8 +66,8 @@ const concepts: Concept[] = [
 
 export function detectBasic(text: string): Prerequisite[] {
   const matched = concepts.filter((c) => c.triggers.some((t) => t.test(text)))
-  const chosen = matched.length > 0 ? matched : concepts.slice(0, 4)
-  return chosen.slice(0, 6).map((c) => ({
+  const chosen = matched.length > 0 ? matched.slice(0, maxLessons) : concepts.slice(0, basicFallbackCount)
+  return chosen.map((c) => ({
     area: c.area, concept: c.term, evidenceQuote: '', whyAssumed: c.whyItMatters,
   }))
 }
@@ -91,5 +94,5 @@ export function buildDetectInput(title: string, text: string, maxChars: number):
 }
 
 export function cacheKey(title: string, url: string | undefined, text: string): string {
-  return createHash('sha256').update(`${title}\n${url ?? ''}\n${text}`).digest('hex')
+  return createHash('sha256').update(JSON.stringify([title, url ?? '', text])).digest('hex')
 }

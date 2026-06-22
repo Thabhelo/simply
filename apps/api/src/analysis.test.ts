@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectBasic, projectConcepts, nextSteps, buildDetectInput, cacheKey } from './analysis.js'
+import { detectBasic, projectConcepts, lessonsFromBasic, nextSteps, buildDetectInput, cacheKey } from './analysis.js'
 
 describe('detectBasic', () => {
   it('matches concepts present in the text', () => {
@@ -19,6 +19,24 @@ describe('detectBasic', () => {
       expect(['Probability', 'Statistics', 'Linear algebra', 'Calculus', 'Optimization', 'ML']).toContain(a)
     }
   })
+  it('emits empty evidence quotes', () => {
+    const prereqs = detectBasic('KL divergence and gradients')
+    expect(prereqs.length).toBeGreaterThan(0)
+    for (const p of prereqs) {
+      expect(p.evidenceQuote).toBe('')
+    }
+  })
+})
+
+describe('lessonsFromBasic', () => {
+  it('maps a Prerequisite to a Lesson', () => {
+    const lessons = lessonsFromBasic([
+      { area: 'ML', concept: 'Dropout', evidenceQuote: '', whyAssumed: 'regularizes' },
+    ])
+    expect(lessons[0]).toEqual({
+      area: 'ML', concept: 'Dropout', title: 'Dropout', intuition: 'regularizes', example: '', inThisPaper: 'regularizes',
+    })
+  })
 })
 
 describe('projectConcepts', () => {
@@ -35,7 +53,10 @@ describe('buildDetectInput', () => {
     const long = 'a'.repeat(50_000)
     const out = buildDetectInput('Cool Paper', long, 14_000)
     expect(out).toContain('Cool Paper')
-    expect(out.length).toBeLessThanOrEqual(14_000 + 'Cool Paper'.length + 4)
+    expect(out.length).toBe('Cool Paper'.length + 2 + 14_000)
+  })
+  it('omits the title join when the title is empty', () => {
+    expect(buildDetectInput('', 'abc', 100)).toBe('abc')
   })
 })
 describe('cacheKey', () => {
@@ -45,5 +66,9 @@ describe('cacheKey', () => {
     const c = cacheKey('T', 'http://x', 'body2')
     expect(a).toBe(b)
     expect(a).not.toBe(c)
+  })
+  it('treats each field independently', () => {
+    expect(cacheKey('A', 'u', 't')).not.toBe(cacheKey('B', 'u', 't'))
+    expect(cacheKey('A', 'u', 't')).not.toBe(cacheKey('A', 'v', 't'))
   })
 })

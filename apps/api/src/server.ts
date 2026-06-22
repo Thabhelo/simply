@@ -5,7 +5,7 @@ import { PDFParse } from 'pdf-parse'
 import PDFDocument from 'pdfkit'
 import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
-import { AREAS } from './types.js'
+import { AREAS, maxLessons } from './types.js'
 import type { Area, Prerequisite, Lesson, ConceptCard, AnalysisResult } from './types.js'
 import { detectBasic, lessonsFromBasic, projectConcepts, nextSteps } from './analysis.js'
 
@@ -17,7 +17,6 @@ const maxPdfBytes = 25 * 1024 * 1024
 const DETECT_MODEL = 'claude-haiku-4-5'
 const TEACH_MODEL = 'claude-haiku-4-5'
 const maxDetectChars = 14_000
-const maxLessons = 6
 
 const apiKey = process.env.ANTHROPIC_API_KEY
 const anthropic = apiKey ? new Anthropic({ apiKey }) : null
