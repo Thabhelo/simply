@@ -75,12 +75,6 @@ button + button {
   padding: 12px;
 }
 
-.concepts {
-  display: grid;
-  gap: 10px;
-  margin-top: 12px;
-}
-
 article {
   background: white;
   border: 1px solid rgba(16, 24, 39, 0.12);
