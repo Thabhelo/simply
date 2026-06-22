@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectBasic, projectConcepts, nextSteps } from './analysis.js'
+import { detectBasic, projectConcepts, nextSteps, buildDetectInput, cacheKey } from './analysis.js'
 
 describe('detectBasic', () => {
   it('matches concepts present in the text', () => {
@@ -27,5 +27,23 @@ describe('projectConcepts', () => {
       { area: 'ML', concept: 'Dropout', title: 'Dropout', intuition: 'Hide units.', example: 'x', inThisPaper: 'used as regularizer' },
     ])
     expect(cards[0]).toEqual({ area: 'ML', term: 'Dropout', plainEnglish: 'Hide units.', whyItMatters: 'used as regularizer' })
+  })
+})
+
+describe('buildDetectInput', () => {
+  it('caps long text to maxDetectChars and includes the title', () => {
+    const long = 'a'.repeat(50_000)
+    const out = buildDetectInput('Cool Paper', long, 14_000)
+    expect(out).toContain('Cool Paper')
+    expect(out.length).toBeLessThanOrEqual(14_000 + 'Cool Paper'.length + 4)
+  })
+})
+describe('cacheKey', () => {
+  it('is stable for the same inputs and differs when text changes', () => {
+    const a = cacheKey('T', 'http://x', 'body')
+    const b = cacheKey('T', 'http://x', 'body')
+    const c = cacheKey('T', 'http://x', 'body2')
+    expect(a).toBe(b)
+    expect(a).not.toBe(c)
   })
 })

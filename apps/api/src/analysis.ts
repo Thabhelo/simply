@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import type { Area, Prerequisite, Lesson, ConceptCard } from './types.js'
 
 type Concept = {
@@ -83,4 +84,12 @@ export function lessonsFromBasic(prereqs: Prerequisite[]): Lesson[] {
   return prereqs.map((p) => ({
     area: p.area, concept: p.concept, title: p.concept, intuition: p.whyAssumed, example: '', inThisPaper: p.whyAssumed,
   }))
+}
+
+export function buildDetectInput(title: string, text: string, maxChars: number): string {
+  return [title, text.slice(0, maxChars)].filter(Boolean).join('\n\n')
+}
+
+export function cacheKey(title: string, url: string | undefined, text: string): string {
+  return createHash('sha256').update(`${title}\n${url ?? ''}\n${text}`).digest('hex')
 }
