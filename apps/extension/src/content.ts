@@ -7,6 +7,16 @@ type PaperPayload = {
 type AnalysisResponse = {
   title: string
   concepts: Array<{ term: string; area: string }>
+  mode?: 'ai' | 'basic'
+  lessons?: Array<{
+    area: string
+    concept: string
+    title: string
+    intuition: string
+    formula?: string
+    example: string
+    inThisPaper: string
+  }>
   ingestion?: { source: string; textLength: number }
 }
 
@@ -78,10 +88,12 @@ function getPaperText(): PaperPayload {
   }
 }
 
-function renderConceptList(concepts: AnalysisResponse['concepts']) {
-  return concepts
+function renderLessonList(lessons: AnalysisResponse['lessons']) {
+  return (lessons ?? [])
     .slice(0, 4)
-    .map((concept) => `<li><span>${concept.area}</span>${concept.term}</li>`)
+    .map(
+      (l) => `<li><span>${l.area}</span><strong>${l.title}</strong><em>${l.intuition}</em></li>`,
+    )
     .join('')
 }
 
@@ -205,6 +217,19 @@ function mountWidget() {
         text-transform: uppercase;
       }
 
+      li strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      li em {
+        color: rgba(0, 0, 0, 0.55);
+        display: block;
+        font-size: 12px;
+        font-style: normal;
+        margin-top: 3px;
+      }
+
       @keyframes slide-in {
         from {
           opacity: 0;
@@ -262,8 +287,8 @@ function mountWidget() {
       }
 
       const analysis = (await response.json()) as AnalysisResponse
-      statusEl.textContent = `Found ${analysis.concepts.length} prerequisite ideas.`
-      resultsEl.innerHTML = renderConceptList(analysis.concepts)
+      statusEl.textContent = `Found ${(analysis.lessons ?? []).length} prerequisite lessons.`
+      resultsEl.innerHTML = renderLessonList(analysis.lessons)
     } catch (error) {
       statusEl.textContent =
         error instanceof Error ? error.message : 'Could not reach the Simply API.'
