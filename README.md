@@ -76,10 +76,10 @@ curl -X POST http://localhost:8787/api/analyze \
 
 ## AI analysis
 
-Set an Anthropic API key to get full prerequisite lessons:
+Set a Google Gemini API key to get full prerequisite lessons:
 
 ```bash
-echo "ANTHROPIC_API_KEY=sk-ant-..." > apps/api/.env
+echo "GEMINI_API_KEY=..." > apps/api/.env
 ```
 
 Without a key, the API runs in **basic mode** (deterministic regex concept

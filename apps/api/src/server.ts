@@ -4,10 +4,9 @@ import express from 'express'
 import { PDFParse } from 'pdf-parse'
 import PDFDocument from 'pdfkit'
 import { z } from 'zod'
-import Anthropic from '@anthropic-ai/sdk'
-import { zodOutputFormat } from '@anthropic-ai/sdk/helpers/zod'
+import { GoogleGenAI, Type } from '@google/genai'
 import { AREAS, maxLessons } from './types.js'
-import type { Area, Prerequisite, Lesson, ConceptCard, AnalysisResult } from './types.js'
+import type { Prerequisite, Lesson, ConceptCard, AnalysisResult } from './types.js'
 import { buildDetectInput, detectBasic, lessonsFromBasic, projectConcepts, nextSteps, cacheKey } from './analysis.js'
 
 const app = express()
@@ -15,16 +14,17 @@ const port = Number(process.env.PORT ?? 8787)
 const maxTextLength = 120_000
 const maxPdfBytes = 25 * 1024 * 1024
 
-const DETECT_MODEL = 'claude-haiku-4-5'
-const TEACH_MODEL = 'claude-haiku-4-5'
-const maxDetectChars = 14_000
+// gemini-2.5-flash is the README-documented stable Flash id; gemini-3.5-flash may be current — flip here if your key has access
+const DETECT_MODEL = 'gemini-2.5-flash'
+const TEACH_MODEL = 'gemini-2.5-flash'
+const maxDetectChars = maxTextLength // feed the full ingested paper (bounded to 120k) — Gemini's large context is the reason for switching
 
-const apiKey = process.env.ANTHROPIC_API_KEY
-const anthropic = apiKey ? new Anthropic({ apiKey }) : null
+const apiKey = process.env.GEMINI_API_KEY
+const genai = apiKey ? new GoogleGenAI({ apiKey }) : null
 console.log(
-  anthropic
+  genai
     ? `Simply: AI mode enabled (${DETECT_MODEL})`
-    : 'Simply: ANTHROPIC_API_KEY not set — running in basic mode',
+    : 'Simply: GEMINI_API_KEY not set — running in basic mode',
 )
 
 app.use(cors())
@@ -358,7 +358,7 @@ async function aiMode(paper: ResolvedPaper): Promise<AnalysisResult> {
 }
 
 async function analyzePaper(paper: ResolvedPaper): Promise<AnalysisResult> {
-  if (!anthropic) return basicMode(paper)
+  if (!genai) return basicMode(paper)
   const key = cacheKey(paper.title, paper.url, paper.text)
   const cached = analysisCache.get(key)
   if (cached) return cached
@@ -378,67 +378,81 @@ async function analyzePaper(paper: ResolvedPaper): Promise<AnalysisResult> {
   }
 }
 
-const prereqSchema = z.object({
-  prerequisites: z.array(
-    z.object({
-      area: z.enum(AREAS as [Area, ...Area[]]),
-      concept: z.string(),
-      evidenceQuote: z.string(),
-      whyAssumed: z.string(),
-    }),
-  ),
-})
+const prereqResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    prerequisites: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          area: { type: Type.STRING, enum: AREAS as unknown as string[] },
+          concept: { type: Type.STRING },
+          evidenceQuote: { type: Type.STRING },
+          whyAssumed: { type: Type.STRING },
+        },
+        required: ['area', 'concept', 'evidenceQuote', 'whyAssumed'],
+      },
+    },
+  },
+  required: ['prerequisites'],
+}
 
 const DETECT_SYSTEM =
   'You help a reader who is about to read a research paper. List the prerequisite math and ML concepts the paper assumes the reader already knows. For each, quote the exact span from the provided text that shows the assumption. Only list concepts that actually appear — never invent. Order by how much each blocks a first pass. List at most 6.'
 
 async function detectPrerequisites(paper: ResolvedPaper): Promise<Prerequisite[]> {
-  if (!anthropic) return []
+  if (!genai) return []
   const input = buildDetectInput(paper.title, paper.text, maxDetectChars)
-  const response = await anthropic.messages.parse({
+  const response = await genai.models.generateContent({
     model: DETECT_MODEL,
-    max_tokens: 2500, // headroom for up to 6 prerequisites with verbatim evidence quotes; truncation -> null parse -> lost detect
-    system: DETECT_SYSTEM,
-    output_config: { format: zodOutputFormat(prereqSchema) },
-    messages: [{ role: 'user', content: input }],
+    contents: input,
+    config: {
+      systemInstruction: DETECT_SYSTEM,
+      responseMimeType: 'application/json',
+      responseSchema: prereqResponseSchema,
+    },
   })
-  const parsed = response.parsed_output
-  if (!parsed) {
-    console.warn('Simply: detect parse returned no structured output')
+  const text = response.text
+  if (!text) {
+    console.warn('Simply: detect returned no structured output')
     return []
   }
+  // JSON.parse can throw on a malformed response — analyzePaper try/catches the whole call, so a throw -> basic mode
+  const parsed = JSON.parse(text) as { prerequisites?: Prerequisite[] }
   // AREAS filter is redundant with the schema enum (defensive only); slice enforces the lesson cap
-  return parsed.prerequisites.filter((p) => AREAS.includes(p.area)).slice(0, maxLessons)
+  return (parsed.prerequisites ?? []).filter((p) => AREAS.includes(p.area)).slice(0, maxLessons)
 }
 
-const lessonSchema = z.object({
-  area: z.enum(AREAS as [Area, ...Area[]]),
-  concept: z.string(),
-  title: z.string(),
-  intuition: z.string(),
-  formula: z.string().optional(),
-  example: z.string(),
-  inThisPaper: z.string(),
-})
+const lessonResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    area: { type: Type.STRING, enum: AREAS as unknown as string[] },
+    concept: { type: Type.STRING },
+    title: { type: Type.STRING },
+    intuition: { type: Type.STRING },
+    formula: { type: Type.STRING },
+    example: { type: Type.STRING },
+    inThisPaper: { type: Type.STRING },
+  },
+  required: ['area', 'concept', 'title', 'intuition', 'example', 'inThisPaper'],
+}
 
 async function generateLesson(p: Prerequisite, paperTitle: string): Promise<Lesson> {
-  if (!anthropic) throw new Error('no client')
-  const response = await anthropic.messages.parse({
+  if (!genai) throw new Error('no client')
+  const response = await genai.models.generateContent({
     model: TEACH_MODEL,
-    max_tokens: 800,
-    system:
-      'Write a compact refresher lesson for someone about to read a research paper. A few sentences of intuition, one key formula if there is one, one short worked example, and one line on how the concept shows up in this paper. Calm and clear — a refresher, not a textbook chapter.',
-    output_config: { format: zodOutputFormat(lessonSchema) },
-    messages: [
-      {
-        role: 'user',
-        content: `Concept: ${p.concept}\nArea: ${p.area}\nPaper: ${paperTitle}\nThe paper assumes (evidence): "${p.evidenceQuote}"\nWhy the reader needs it: ${p.whyAssumed}`,
-      },
-    ],
+    contents: `Concept: ${p.concept}\nArea: ${p.area}\nPaper: ${paperTitle}\nThe paper assumes (evidence): "${p.evidenceQuote}"\nWhy the reader needs it: ${p.whyAssumed}`,
+    config: {
+      systemInstruction:
+        'Write a compact refresher lesson for someone about to read a research paper. A few sentences of intuition, one key formula if there is one, one short worked example, and one line on how the concept shows up in this paper. Calm and clear — a refresher, not a textbook chapter.',
+      responseMimeType: 'application/json',
+      responseSchema: lessonResponseSchema,
+    },
   })
-  const lesson = response.parsed_output
-  if (!lesson) throw new Error('empty lesson')
-  return lesson
+  const text = response.text
+  if (!text) throw new Error('empty lesson')
+  return JSON.parse(text) as Lesson
 }
 
 async function teachAll(prereqs: Prerequisite[], paperTitle: string): Promise<Lesson[]> {
@@ -529,7 +543,7 @@ app.post('/api/report.pdf', async (request, response) => {
     document.moveDown()
     document.fontSize(12).fillColor('#667085').text(report.summary)
     if (report.mode === 'basic') {
-      document.moveDown(0.5).fontSize(10).fillColor('#c24a1a').text('Basic mode — set ANTHROPIC_API_KEY for full AI lessons.')
+      document.moveDown(0.5).fontSize(10).fillColor('#c24a1a').text('Basic mode — set GEMINI_API_KEY for full AI lessons.')
     }
     document.moveDown()
 
