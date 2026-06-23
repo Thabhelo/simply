@@ -118,13 +118,13 @@ function mountWidget() {
         backdrop-filter: blur(22px) saturate(180%);
         border: 1px solid rgba(0, 0, 0, 0.08);
         border-radius: 22px;
-        bottom: 24px;
         box-shadow: 0 24px 64px rgba(15, 23, 42, 0.14);
         box-sizing: border-box;
         color: #111;
         padding: 16px;
         position: fixed;
         right: 24px;
+        top: 24px;
         width: 320px;
         max-height: min(72vh, 600px);
         overflow-y: auto;
@@ -233,7 +233,7 @@ function mountWidget() {
       @keyframes slide-in {
         from {
           opacity: 0;
-          transform: translateY(12px) translateX(18px);
+          transform: translateY(-12px) translateX(18px);
         }
 
         to {
