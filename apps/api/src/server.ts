@@ -376,8 +376,14 @@ async function analyzePaper(paper: ResolvedPaper): Promise<Guide> {
     }
   }
   if (guideCache.size >= maxCacheEntries) {
-    const oldest = guideCache.keys().next().value
-    if (oldest !== undefined && oldest !== id) guideCache.delete(oldest) // FIFO evict; guard satisfies strict types
+    // Evict the oldest BASIC entry first so a burst of basic-mode results can't push out cached ai guides.
+    let victim: string | undefined
+    for (const [k, g] of guideCache) {
+      if (k === id) continue
+      if (g.mode === 'basic') { victim = k; break }
+      if (victim === undefined) victim = k // fallback: oldest non-current entry
+    }
+    if (victim !== undefined) guideCache.delete(victim)
   }
   guideCache.set(id, guide) // store last guide (ai or basic) so GET /api/guide/:id can serve it
   return guide
@@ -449,17 +455,33 @@ const TEACH_SYSTEM =
 
 type TeachLesson = { title: string; hook: string; definition: string; intuition: string; example: string; inThisPaper: string }
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// Gemini Flash returns transient 503/UNAVAILABLE/429 under load; these are worth a quick retry.
+function isTransient(error: unknown): boolean {
+  const m = (error instanceof Error ? error.message : String(error)).toLowerCase()
+  return m.includes('503') || m.includes('unavailable') || m.includes('429') || m.includes('resource_exhausted') || m.includes('overloaded')
+}
+
 async function generateLesson(p: Prerequisite, paperTitle: string): Promise<Lesson> {
   if (!genai) throw new Error('no client')
-  const response = await genai.models.generateContent({
-    model: TEACH_MODEL,
-    contents: `Concept: ${p.concept}\nArea: ${p.area}\nPaper: ${paperTitle}\nThe paper assumes (evidence): "${p.evidenceQuote}"\nWhy the reader needs it: ${p.whyAssumed}`,
-    config: { systemInstruction: TEACH_SYSTEM, responseMimeType: 'application/json', responseSchema: lessonResponseSchema },
-  })
-  const text = response.text
-  if (!text) throw new Error('empty lesson')
-  const t = JSON.parse(text) as TeachLesson
-  return { ...t, area: p.area, concept: p.concept, buildsOn: p.buildsOn }
+  const contents = `Concept: ${p.concept}\nArea: ${p.area}\nPaper: ${paperTitle}\nThe paper assumes (evidence): "${p.evidenceQuote}"\nWhy the reader needs it: ${p.whyAssumed}`
+  const config = { systemInstruction: TEACH_SYSTEM, responseMimeType: 'application/json', responseSchema: lessonResponseSchema }
+  let lastError: unknown
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(attempt * 400 + Math.floor(Math.random() * 200)) // ~0.4-0.6s, ~0.8-1.0s backoff + jitter
+    try {
+      const response = await genai.models.generateContent({ model: TEACH_MODEL, contents, config })
+      const text = response.text
+      if (!text) throw new Error('empty lesson')
+      const t = JSON.parse(text) as TeachLesson
+      return { ...t, area: p.area, concept: p.concept, buildsOn: p.buildsOn }
+    } catch (error) {
+      lastError = error
+      if (!isTransient(error) || attempt === 2) throw error // retry only transient errors; lessonFromPrereq is the final fallback in teachAll
+    }
+  }
+  throw lastError
 }
 
 async function teachAll(prereqs: Prerequisite[], paperTitle: string): Promise<Lesson[]> {
