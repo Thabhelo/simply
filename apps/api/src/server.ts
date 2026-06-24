@@ -6,8 +6,8 @@ import PDFDocument from 'pdfkit'
 import { z } from 'zod'
 import { GoogleGenAI, Type } from '@google/genai'
 import { AREAS, maxLessons } from './types.js'
-import type { Prerequisite, Lesson, ConceptCard, AnalysisResult } from './types.js'
-import { buildDetectInput, detectBasic, lessonsFromBasic, projectConcepts, nextSteps, cacheKey } from './analysis.js'
+import type { Prerequisite, Lesson, Guide } from './types.js'
+import { buildDetectInput, detectBasic, lessonsFromBasic, lessonFromPrereq, projectConcepts, nextSteps, cacheKey, filterBuildsOn } from './analysis.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
@@ -325,62 +325,68 @@ async function resolvePaperInput(input: PaperRequest): Promise<ResolvedPaper> {
   }
 }
 
-function basicMode(paper: ResolvedPaper): AnalysisResult {
+function basicMode(paper: ResolvedPaper, id: string): Guide {
   const haystack = `${paper.title}\n${paper.url ?? ''}\n${paper.text}`
   const lessons = lessonsFromBasic(detectBasic(haystack))
   return {
+    id,
     title: paper.title?.trim() || 'Untitled research paper',
     url: paper.url,
     summary: 'Simply found the prerequisite math and ML ideas that are likely to block a first pass through this paper.',
-    mode: 'basic', lessons, concepts: projectConcepts(lessons), nextSteps,
+    mode: 'basic',
+    overview: 'Set GEMINI_API_KEY for full AI lessons. These are the prerequisite areas this paper leans on.',
+    lessons, concepts: projectConcepts(lessons), nextSteps,
   }
 }
 
-const analysisCache = new Map<string, AnalysisResult>()
-const maxCacheEntries = 200
-
-async function aiMode(paper: ResolvedPaper): Promise<AnalysisResult> {
-  const prereqs = await detectPrerequisites(paper)
-  if (prereqs.length === 0) {
+async function aiMode(paper: ResolvedPaper, id: string): Promise<Guide> {
+  const { overview, prerequisites } = await detectGuide(paper)
+  if (prerequisites.length === 0) {
     console.warn('Simply: detect returned no prerequisites — using basic mode')
-    return basicMode(paper) // nothing detected -> basic
+    return basicMode(paper, id)
   }
-  const lessons = await teachAll(prereqs, paper.title)
+  const lessons = await teachAll(prerequisites, paper.title)
   return {
+    id,
     title: paper.title?.trim() || 'Untitled research paper',
     url: paper.url,
     summary: 'Simply built short refresher lessons for the prerequisite ideas this paper assumes.',
     mode: 'ai',
-    lessons,
-    concepts: projectConcepts(lessons),
-    nextSteps,
+    overview,
+    lessons, concepts: projectConcepts(lessons), nextSteps,
   }
 }
 
-async function analyzePaper(paper: ResolvedPaper): Promise<AnalysisResult> {
-  if (!genai) return basicMode(paper)
-  const key = cacheKey(paper.title, paper.url, paper.text)
-  const cached = analysisCache.get(key)
-  if (cached) return cached
-  try {
-    const result = await aiMode(paper)
-    if (result.mode === 'ai') {
-      if (analysisCache.size >= maxCacheEntries) {
-        const oldest = analysisCache.keys().next().value
-        if (oldest !== undefined) analysisCache.delete(oldest) // FIFO evict; guard satisfies strict types
-      }
-      analysisCache.set(key, result) // only cache ai results, never basic
+const guideCache = new Map<string, Guide>()
+const maxCacheEntries = 200
+
+async function analyzePaper(paper: ResolvedPaper): Promise<Guide> {
+  const id = cacheKey(paper.title, paper.url, paper.text)
+  const cached = guideCache.get(id)
+  if (cached && cached.mode === 'ai') return cached // reuse ai; always recompute basic
+  let guide: Guide
+  if (!genai) {
+    guide = basicMode(paper, id)
+  } else {
+    try {
+      guide = await aiMode(paper, id)
+    } catch (error) {
+      console.error('Simply: AI analysis failed — using basic mode:', error instanceof Error ? error.message : error)
+      guide = basicMode(paper, id)
     }
-    return result
-  } catch (error) {
-    console.error('Simply: AI analysis failed — using basic mode:', error instanceof Error ? error.message : error)
-    return basicMode(paper)
   }
+  if (guideCache.size >= maxCacheEntries) {
+    const oldest = guideCache.keys().next().value
+    if (oldest !== undefined && oldest !== id) guideCache.delete(oldest) // FIFO evict; guard satisfies strict types
+  }
+  guideCache.set(id, guide) // store last guide (ai or basic) so GET /api/guide/:id can serve it
+  return guide
 }
 
-const prereqResponseSchema = {
+const detectResponseSchema = {
   type: Type.OBJECT,
   properties: {
+    overview: { type: Type.STRING },
     prerequisites: {
       type: Type.ARRAY,
       items: {
@@ -390,78 +396,75 @@ const prereqResponseSchema = {
           concept: { type: Type.STRING },
           evidenceQuote: { type: Type.STRING },
           whyAssumed: { type: Type.STRING },
+          buildsOn: { type: Type.ARRAY, items: { type: Type.STRING } },
         },
-        required: ['area', 'concept', 'evidenceQuote', 'whyAssumed'],
+        required: ['area', 'concept', 'evidenceQuote', 'whyAssumed', 'buildsOn'],
       },
     },
   },
-  required: ['prerequisites'],
+  required: ['overview', 'prerequisites'],
 }
 
 const DETECT_SYSTEM =
-  'You help a reader who is about to read a research paper. List the prerequisite math and ML concepts the paper assumes the reader already knows. For each, quote the exact span from the provided text that shows the assumption. Only list concepts that actually appear — never invent. Order by how much each blocks a first pass. List at most 6.'
+  'You help a reader who is about to read a research paper. Identify the prerequisite math and ML concepts the paper assumes the reader already knows. Order them by what to learn first. For each: quote the exact span from the text that shows the assumption (evidenceQuote), say why the reader needs it (whyAssumed), and set buildsOn to the concepts IN THIS LIST that it depends on (use the exact concept strings; empty if none). Also write a 2-4 sentence overview of what the paper assumes and how to prepare. Only list concepts that actually appear — never invent. List at most 6 prerequisites.'
 
-async function detectPrerequisites(paper: ResolvedPaper): Promise<Prerequisite[]> {
-  if (!genai) return []
+type DetectResult = { overview: string; prerequisites: Prerequisite[] }
+
+async function detectGuide(paper: ResolvedPaper): Promise<DetectResult> {
+  if (!genai) return { overview: '', prerequisites: [] }
   const input = buildDetectInput(paper.title, paper.text, maxDetectChars)
   const response = await genai.models.generateContent({
     model: DETECT_MODEL,
     contents: input,
-    config: {
-      systemInstruction: DETECT_SYSTEM,
-      responseMimeType: 'application/json',
-      responseSchema: prereqResponseSchema,
-    },
+    config: { systemInstruction: DETECT_SYSTEM, responseMimeType: 'application/json', responseSchema: detectResponseSchema },
   })
   const text = response.text
   if (!text) {
     console.warn('Simply: detect returned no structured output')
-    return []
+    return { overview: '', prerequisites: [] }
   }
   // JSON.parse can throw on a malformed response — analyzePaper try/catches the whole call, so a throw -> basic mode
-  const parsed = JSON.parse(text) as { prerequisites?: Prerequisite[] }
-  // AREAS filter is redundant with the schema enum (defensive only); slice enforces the lesson cap
-  return (parsed.prerequisites ?? []).filter((p) => AREAS.includes(p.area)).slice(0, maxLessons)
+  const parsed = JSON.parse(text) as { overview?: string; prerequisites?: Prerequisite[] }
+  const prerequisites = filterBuildsOn(
+    (parsed.prerequisites ?? []).filter((p) => AREAS.includes(p.area)).slice(0, maxLessons),
+  )
+  return { overview: parsed.overview ?? '', prerequisites }
 }
 
 const lessonResponseSchema = {
   type: Type.OBJECT,
   properties: {
-    area: { type: Type.STRING, enum: AREAS as unknown as string[] },
-    concept: { type: Type.STRING },
     title: { type: Type.STRING },
+    hook: { type: Type.STRING },
+    definition: { type: Type.STRING },
     intuition: { type: Type.STRING },
-    formula: { type: Type.STRING },
     example: { type: Type.STRING },
     inThisPaper: { type: Type.STRING },
   },
-  required: ['area', 'concept', 'title', 'intuition', 'example', 'inThisPaper'],
+  required: ['title', 'hook', 'definition', 'intuition', 'example', 'inThisPaper'],
 }
+
+const TEACH_SYSTEM =
+  'Write a compact pedagogical refresher lesson for someone about to read a research paper. Include: a one-sentence plain-language hook or analogy; a precise definition; 2-3 sentences of intuition; one short worked example with steps; and one line on how the concept shows up in this paper. Write ALL math as KaTeX-compatible LaTeX — inline as $ ... $ and display as $$ ... $$. Calm and clear — a refresher, not a textbook chapter.'
+
+type TeachLesson = { title: string; hook: string; definition: string; intuition: string; example: string; inThisPaper: string }
 
 async function generateLesson(p: Prerequisite, paperTitle: string): Promise<Lesson> {
   if (!genai) throw new Error('no client')
   const response = await genai.models.generateContent({
     model: TEACH_MODEL,
     contents: `Concept: ${p.concept}\nArea: ${p.area}\nPaper: ${paperTitle}\nThe paper assumes (evidence): "${p.evidenceQuote}"\nWhy the reader needs it: ${p.whyAssumed}`,
-    config: {
-      systemInstruction:
-        'Write a compact refresher lesson for someone about to read a research paper. A few sentences of intuition, one key formula if there is one, one short worked example, and one line on how the concept shows up in this paper. Calm and clear — a refresher, not a textbook chapter.',
-      responseMimeType: 'application/json',
-      responseSchema: lessonResponseSchema,
-    },
+    config: { systemInstruction: TEACH_SYSTEM, responseMimeType: 'application/json', responseSchema: lessonResponseSchema },
   })
   const text = response.text
   if (!text) throw new Error('empty lesson')
-  return JSON.parse(text) as Lesson
+  const t = JSON.parse(text) as TeachLesson
+  return { ...t, area: p.area, concept: p.concept, buildsOn: p.buildsOn }
 }
 
 async function teachAll(prereqs: Prerequisite[], paperTitle: string): Promise<Lesson[]> {
   const settled = await Promise.allSettled(prereqs.map((p) => generateLesson(p, paperTitle)))
-  return settled.map((res, i) => {
-    if (res.status === 'fulfilled') return res.value
-    const p = prereqs[i]
-    return { area: p.area, concept: p.concept, title: p.concept, intuition: p.whyAssumed, example: '', inThisPaper: p.evidenceQuote || p.whyAssumed }
-  })
+  return settled.map((res, i) => (res.status === 'fulfilled' ? res.value : lessonFromPrereq(prereqs[i])))
 }
 
 app.get('/health', (_request, response) => {
@@ -505,10 +508,10 @@ app.post('/api/analyze', async (request, response) => {
 
   try {
     const paper = await resolvePaperInput(parsed.data)
-    const analysis = await analyzePaper(paper)
+    const guide = await analyzePaper(paper)
 
     response.json({
-      ...analysis,
+      ...guide,
       ingestion: {
         source: paper.source,
         textLength: paper.text.length,
@@ -521,6 +524,15 @@ app.post('/api/analyze', async (request, response) => {
       error: error instanceof Error ? error.message : 'Could not analyze this paper.',
     })
   }
+})
+
+app.get('/api/guide/:id', (request, response) => {
+  const guide = guideCache.get(request.params.id)
+  if (!guide) {
+    response.status(404).json({ error: 'Guide not found — re-analyze the paper.' })
+    return
+  }
+  response.json(guide)
 })
 
 app.post('/api/report.pdf', async (request, response) => {
@@ -541,7 +553,7 @@ app.post('/api/report.pdf', async (request, response) => {
 
     document.fontSize(26).fillColor('#101827').text(`Simply Guide: ${report.title}`, { lineGap: 8 })
     document.moveDown()
-    document.fontSize(12).fillColor('#667085').text(report.summary)
+    document.fontSize(12).fillColor('#667085').text(report.overview || report.summary)
     if (report.mode === 'basic') {
       document.moveDown(0.5).fontSize(10).fillColor('#c24a1a').text('Basic mode — set GEMINI_API_KEY for full AI lessons.')
     }
@@ -550,8 +562,9 @@ app.post('/api/report.pdf', async (request, response) => {
     report.lessons.forEach((lesson, index) => {
       document.fillColor('#5b4bff').fontSize(10).text(lesson.area.toUpperCase())
       document.fillColor('#101827').fontSize(16).text(`${index + 1}. ${lesson.title}`)
+      if (lesson.hook) document.fillColor('#344054').fontSize(12).text(lesson.hook)
+      if (lesson.definition) document.fillColor('#101827').fontSize(11).text(`Definition: ${lesson.definition}`)
       document.fillColor('#344054').fontSize(12).text(lesson.intuition)
-      if (lesson.formula) document.fillColor('#101827').fontSize(11).text(`Formula: ${lesson.formula}`)
       if (lesson.example) document.fillColor('#344054').fontSize(12).text(`Example: ${lesson.example}`)
       document.fillColor('#667085').fontSize(11).text(`In this paper: ${lesson.inThisPaper}`)
       document.moveDown()
