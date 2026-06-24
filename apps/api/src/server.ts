@@ -334,7 +334,9 @@ function basicMode(paper: ResolvedPaper, id: string): Guide {
     url: paper.url,
     summary: 'Simply found the prerequisite math and ML ideas that are likely to block a first pass through this paper.',
     mode: 'basic',
-    overview: 'Set GEMINI_API_KEY for full AI lessons. These are the prerequisite areas this paper leans on.',
+    overview: genai
+      ? 'AI lessons are temporarily unavailable (the model hit a rate or quota limit). These are the prerequisite areas this paper leans on.'
+      : 'Set GEMINI_API_KEY for full AI lessons. These are the prerequisite areas this paper leans on.',
     lessons, concepts: projectConcepts(lessons), nextSteps,
   }
 }
@@ -577,7 +579,7 @@ app.post('/api/report.pdf', async (request, response) => {
     document.moveDown()
     document.fontSize(12).fillColor('#667085').text(report.overview || report.summary)
     if (report.mode === 'basic') {
-      document.moveDown(0.5).fontSize(10).fillColor('#c24a1a').text('Basic mode — set GEMINI_API_KEY for full AI lessons.')
+      document.moveDown(0.5).fontSize(10).fillColor('#c24a1a').text(genai ? 'Basic mode — AI lessons hit a rate/quota limit; showing prerequisite areas only.' : 'Basic mode — set GEMINI_API_KEY for full AI lessons.')
     }
     document.moveDown()
 
