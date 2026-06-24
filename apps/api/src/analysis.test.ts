@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectBasic, projectConcepts, lessonsFromBasic, nextSteps, buildDetectInput, cacheKey, filterBuildsOn } from './analysis.js'
+import { detectBasic, projectConcepts, lessonsFromBasic, lessonFromPrereq, nextSteps, buildDetectInput, cacheKey, filterBuildsOn } from './analysis.js'
 
 describe('detectBasic', () => {
   it('matches concepts present in the text', () => {
@@ -38,6 +38,17 @@ describe('lessonsFromBasic', () => {
       hook: '', definition: '', intuition: 'regularizes', example: '', inThisPaper: 'regularizes',
       buildsOn: [],
     })
+  })
+})
+
+describe('lessonFromPrereq', () => {
+  it('uses evidenceQuote for inThisPaper when present', () => {
+    const lesson = lessonFromPrereq({
+      area: 'Calculus', concept: 'Gradient', evidenceQuote: 'we take the gradient', whyAssumed: 'optimizes', buildsOn: ['Vectors'],
+    })
+    expect(lesson.inThisPaper).toBe('we take the gradient')
+    expect(lesson.intuition).toBe('optimizes')
+    expect(lesson.buildsOn).toEqual(['Vectors'])
   })
 })
 

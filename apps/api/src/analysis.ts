@@ -81,12 +81,17 @@ export const nextSteps = [
   'Export this guide as a PDF and keep it beside the paper.',
 ]
 
-export function lessonsFromBasic(prereqs: Prerequisite[]): Lesson[] {
-  return prereqs.map((p) => ({
+export function lessonFromPrereq(p: Prerequisite): Lesson {
+  return {
     area: p.area, concept: p.concept, title: p.concept,
-    hook: '', definition: '', intuition: p.whyAssumed, example: '', inThisPaper: p.whyAssumed,
+    hook: '', definition: '', intuition: p.whyAssumed, example: '',
+    inThisPaper: p.evidenceQuote || p.whyAssumed,
     buildsOn: p.buildsOn ?? [],
-  }))
+  }
+}
+
+export function lessonsFromBasic(prereqs: Prerequisite[]): Lesson[] {
+  return prereqs.map(lessonFromPrereq)
 }
 
 export function filterBuildsOn(prereqs: Prerequisite[]): Prerequisite[] {
