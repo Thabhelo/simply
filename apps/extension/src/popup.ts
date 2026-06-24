@@ -10,14 +10,18 @@ type Lesson = {
   area: string
   concept: string
   title: string
+  hook: string
+  definition: string
   intuition: string
-  formula?: string
   example: string
   inThisPaper: string
+  buildsOn: string[]
 }
 
 type AnalysisResponse = {
+  id?: string
   title: string
+  overview?: string
   summary: string
   mode?: 'ai' | 'basic'
   lessons?: Lesson[]
@@ -108,7 +112,7 @@ function renderAnalysis(analysis: AnalysisResponse) {
               <span>${l.area}</span>
               <h3>${l.title}</h3>
               <p>${l.intuition}</p>
-              ${l.formula ? `<code class="formula">${l.formula}</code>` : ''}
+              ${l.definition ? `<code class="formula">${l.definition}</code>` : ''}
               ${l.example ? `<p class="example">${l.example}</p>` : ''}
               <small>${l.inThisPaper}</small>
             </article>`,

@@ -5,22 +5,27 @@ type PaperPayload = {
 }
 
 type AnalysisResponse = {
+  id?: string
   title: string
+  overview?: string
   concepts: Array<{ term: string; area: string }>
   mode?: 'ai' | 'basic'
   lessons?: Array<{
     area: string
     concept: string
     title: string
+    hook: string
+    definition: string
     intuition: string
-    formula?: string
     example: string
     inThisPaper: string
+    buildsOn: string[]
   }>
   ingestion?: { source: string; textLength: number }
 }
 
 const apiBase = 'http://localhost:8787'
+const webBase = 'http://localhost:5173' // dev frontend; hardcoded for now (configurable for prod — see deploy notes)
 const widgetId = 'simply-research-widget'
 
 function getMeta(name: string) {
@@ -268,6 +273,7 @@ function mountWidget() {
   const resultsEl = shadow.querySelector<HTMLElement>('#simply-results')
 
   let lastPayload: PaperPayload | null = null
+  let lastGuideId: string | null = null
 
   dismissButton?.addEventListener('click', () => host.remove())
 
@@ -295,6 +301,7 @@ function mountWidget() {
       }
 
       const analysis = (await response.json()) as AnalysisResponse
+      lastGuideId = analysis.id ?? null
       const count = (analysis.lessons ?? []).length
       statusEl.textContent = count
         ? `Found ${count} prerequisite ideas. Open the full guide for the lessons.`
@@ -309,35 +316,14 @@ function mountWidget() {
     }
   })
 
-  openButton?.addEventListener('click', async () => {
-    if (!statusEl || !openButton) {
+  openButton?.addEventListener('click', () => {
+    if (!statusEl || !openButton) return
+    if (!lastGuideId) {
+      statusEl.textContent = 'Analyze first.'
       return
     }
-
-    const payload = lastPayload ?? getPaperText()
-    openButton.disabled = true
-    statusEl.textContent = 'Building the full guide...'
-
-    try {
-      const response = await fetch(`${apiBase}/api/report.pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-
-      if (!response.ok) {
-        throw new Error('Could not generate the guide PDF.')
-      }
-
-      const blobUrl = URL.createObjectURL(await response.blob())
-      window.open(blobUrl, '_blank', 'noopener')
-      statusEl.textContent = 'Opened the full guide in a new tab.'
-    } catch (error) {
-      statusEl.textContent =
-        error instanceof Error ? error.message : 'Could not open the guide.'
-    } finally {
-      openButton.disabled = false
-    }
+    window.open(`${webBase}/guide?id=${encodeURIComponent(lastGuideId)}`, '_blank', 'noopener')
+    statusEl.textContent = 'Opened the full guide in a new tab.'
   })
 }
 
