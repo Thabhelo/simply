@@ -29,6 +29,15 @@ type AnalysisResponse = {
   nextSteps: string[]
 }
 
+function escapeHtml(value: string): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 const apiBase = 'http://localhost:8787'
 const analyzeButton = document.querySelector<HTMLButtonElement>('#analyze')
 const downloadButton = document.querySelector<HTMLButtonElement>('#download')
@@ -102,19 +111,19 @@ function renderAnalysis(analysis: AnalysisResponse) {
   const lessons = analysis.lessons ?? []
   const badge = analysis.mode === 'basic' ? '<span class="mode-badge">Basic mode</span>' : ''
   resultsEl.innerHTML = `
-    <div class="result-head"><h2>${analysis.title}</h2>${badge}</div>
-    <p>${analysis.summary}</p>
+    <div class="result-head"><h2>${escapeHtml(analysis.title)}</h2>${badge}</div>
+    <p>${escapeHtml(analysis.summary)}</p>
     <div class="lessons">
       ${lessons
         .map(
           (l) => `
             <article class="lesson">
-              <span>${l.area}</span>
-              <h3>${l.title}</h3>
-              <p>${l.intuition}</p>
-              ${l.definition ? `<code class="formula">${l.definition}</code>` : ''}
-              ${l.example ? `<p class="example">${l.example}</p>` : ''}
-              <small>${l.inThisPaper}</small>
+              <span>${escapeHtml(l.area)}</span>
+              <h3>${escapeHtml(l.title)}</h3>
+              <p>${escapeHtml(l.intuition)}</p>
+              ${l.definition ? `<code class="formula">${escapeHtml(l.definition)}</code>` : ''}
+              ${l.example ? `<p class="example">${escapeHtml(l.example)}</p>` : ''}
+              <small>${escapeHtml(l.inThisPaper)}</small>
             </article>`,
         )
         .join('')}

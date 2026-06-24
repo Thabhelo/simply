@@ -24,6 +24,15 @@ type AnalysisResponse = {
   ingestion?: { source: string; textLength: number }
 }
 
+function escapeHtml(value: string): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 const apiBase = 'http://localhost:8787'
 const webBase = 'http://localhost:5173' // dev frontend; hardcoded for now (configurable for prod — see deploy notes)
 const widgetId = 'simply-research-widget'
@@ -96,7 +105,7 @@ function getPaperText(): PaperPayload {
 function renderLessonTeaser(lessons: AnalysisResponse['lessons']) {
   return (lessons ?? [])
     .slice(0, 3)
-    .map((l) => `<li><span>${l.area}</span><strong>${l.title}</strong></li>`)
+    .map((l) => `<li><span>${escapeHtml(l.area)}</span><strong>${escapeHtml(l.title)}</strong></li>`)
     .join('')
 }
 
