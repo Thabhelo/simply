@@ -260,7 +260,7 @@ function mountWidget() {
       </div>
       <div class="status" id="simply-status"></div>
       <ul id="simply-results"></ul>
-      <button class="primary open" id="simply-open" type="button" hidden>Open full guide (PDF) ↗</button>
+      <button class="primary open" id="simply-open" type="button" hidden>Open full guide ↗</button>
     </section>
   `
 
