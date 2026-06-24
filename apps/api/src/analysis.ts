@@ -67,9 +67,7 @@ const concepts: Concept[] = [
 export function detectBasic(text: string): Prerequisite[] {
   const matched = concepts.filter((c) => c.triggers.some((t) => t.test(text)))
   const chosen = matched.length > 0 ? matched.slice(0, maxLessons) : concepts.slice(0, basicFallbackCount)
-  return chosen.map((c) => ({
-    area: c.area, concept: c.term, evidenceQuote: '', whyAssumed: c.whyItMatters,
-  }))
+  return chosen.map((c) => ({ area: c.area, concept: c.term, evidenceQuote: '', whyAssumed: c.whyItMatters, buildsOn: [] }))
 }
 
 export function projectConcepts(lessons: Lesson[]): ConceptCard[] {
@@ -85,8 +83,15 @@ export const nextSteps = [
 
 export function lessonsFromBasic(prereqs: Prerequisite[]): Lesson[] {
   return prereqs.map((p) => ({
-    area: p.area, concept: p.concept, title: p.concept, intuition: p.whyAssumed, example: '', inThisPaper: p.whyAssumed,
+    area: p.area, concept: p.concept, title: p.concept,
+    hook: '', definition: '', intuition: p.whyAssumed, example: '', inThisPaper: p.whyAssumed,
+    buildsOn: p.buildsOn ?? [],
   }))
+}
+
+export function filterBuildsOn(prereqs: Prerequisite[]): Prerequisite[] {
+  const names = new Set(prereqs.map((p) => p.concept))
+  return prereqs.map((p) => ({ ...p, buildsOn: (p.buildsOn ?? []).filter((b) => b !== p.concept && names.has(b)) }))
 }
 
 export function buildDetectInput(title: string, text: string, maxChars: number): string {

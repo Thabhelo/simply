@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectBasic, projectConcepts, lessonsFromBasic, nextSteps, buildDetectInput, cacheKey } from './analysis.js'
+import { detectBasic, projectConcepts, lessonsFromBasic, nextSteps, buildDetectInput, cacheKey, filterBuildsOn } from './analysis.js'
 
 describe('detectBasic', () => {
   it('matches concepts present in the text', () => {
@@ -29,12 +29,14 @@ describe('detectBasic', () => {
 })
 
 describe('lessonsFromBasic', () => {
-  it('maps a Prerequisite to a Lesson', () => {
+  it('maps prerequisites to the enriched basic Lesson shape', () => {
     const lessons = lessonsFromBasic([
-      { area: 'ML', concept: 'Dropout', evidenceQuote: '', whyAssumed: 'regularizes' },
+      { area: 'ML', concept: 'Dropout', evidenceQuote: '', whyAssumed: 'regularizes', buildsOn: [] },
     ])
     expect(lessons[0]).toEqual({
-      area: 'ML', concept: 'Dropout', title: 'Dropout', intuition: 'regularizes', example: '', inThisPaper: 'regularizes',
+      area: 'ML', concept: 'Dropout', title: 'Dropout',
+      hook: '', definition: '', intuition: 'regularizes', example: '', inThisPaper: 'regularizes',
+      buildsOn: [],
     })
   })
 })
@@ -42,9 +44,25 @@ describe('lessonsFromBasic', () => {
 describe('projectConcepts', () => {
   it('maps a Lesson to the legacy ConceptCard shape', () => {
     const cards = projectConcepts([
-      { area: 'ML', concept: 'Dropout', title: 'Dropout', intuition: 'Hide units.', example: 'x', inThisPaper: 'used as regularizer' },
+      { area: 'ML', concept: 'Dropout', title: 'Dropout', hook: 'h', definition: 'd', intuition: 'Hide units.', example: 'x', inThisPaper: 'used as regularizer', buildsOn: [] },
     ])
     expect(cards[0]).toEqual({ area: 'ML', term: 'Dropout', plainEnglish: 'Hide units.', whyItMatters: 'used as regularizer' })
+  })
+})
+
+describe('detectBasic buildsOn', () => {
+  it('sets buildsOn to [] on every prerequisite', () => {
+    expect(detectBasic('KL divergence and gradients').every((p) => Array.isArray(p.buildsOn) && p.buildsOn.length === 0)).toBe(true)
+  })
+})
+
+describe('filterBuildsOn', () => {
+  it('drops buildsOn references to concepts not in the set and self-refs', () => {
+    const out = filterBuildsOn([
+      { area: 'Linear algebra', concept: 'Vectors', evidenceQuote: '', whyAssumed: '', buildsOn: [] },
+      { area: 'Calculus', concept: 'Gradient', evidenceQuote: '', whyAssumed: '', buildsOn: ['Vectors', 'Ghost concept', 'Gradient'] },
+    ])
+    expect(out[1].buildsOn).toEqual(['Vectors'])
   })
 })
 
