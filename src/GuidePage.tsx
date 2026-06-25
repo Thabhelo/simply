@@ -9,15 +9,14 @@ import './GuidePage.css'
 
 const apiBase = 'http://localhost:8787'
 
-// Init mermaid once at module scope. securityLevel:'strict' sanitizes labels (DOMPurify)
-// and disables click/HTML — required since diagram text is untrusted model output.
-mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' })
+type Theme = 'light' | 'dark'
 
 let diagramSeq = 0
 
 // Renders a Mermaid diagram safely. Invalid or unparseable input renders nothing
-// (no error graphic), mirroring KaTeX throwOnError:false.
-function MermaidDiagram({ code }: { code: string }) {
+// (no error graphic), mirroring KaTeX throwOnError:false. Re-initializes mermaid with
+// the active theme before each render so diagrams recolor on the light/dark toggle.
+function MermaidDiagram({ code, theme }: { code: string; theme: Theme }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     let cancelled = false
@@ -27,6 +26,9 @@ function MermaidDiagram({ code }: { code: string }) {
     const id = `mmd-${diagramSeq++}`
     ;(async () => {
       try {
+        // securityLevel:'strict' sanitizes labels (DOMPurify) and disables click/HTML —
+        // required since diagram text is untrusted model output. Re-init per render to apply theme.
+        mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: theme === 'dark' ? 'dark' : 'neutral' })
         const ok = await mermaid.parse(code, { suppressErrors: true })
         if (!ok || cancelled) return
         const { svg } = await mermaid.render(id, code)
@@ -38,7 +40,7 @@ function MermaidDiagram({ code }: { code: string }) {
     return () => {
       cancelled = true
     }
-  }, [code])
+  }, [code, theme])
   return <div className="guide-diagram" ref={ref} />
 }
 
@@ -70,10 +72,23 @@ type State =
   | { status: 'error'; message: string }
   | { status: 'ready'; guide: Guide }
 
+function initialTheme(): Theme {
+  const saved = localStorage.getItem('simply-theme')
+  if (saved === 'light' || saved === 'dark') return saved
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
+
 function GuidePage() {
   const id = new URLSearchParams(window.location.search).get('id')
   const [state, setState] = useState<State>({ status: 'loading' })
+  const [theme, setTheme] = useState<Theme>(initialTheme)
   const contentRef = useRef<HTMLDivElement>(null)
+
+  // Apply + persist theme. data-theme drives the CSS variables (scoped to this viewer).
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem('simply-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     if (!id) {
@@ -113,15 +128,43 @@ function GuidePage() {
     }
   }, [state])
 
-  if (state.status === 'loading') return <main className="guide-shell"><p className="guide-status">Loading guide…</p></main>
-  if (state.status === 'error') return <main className="guide-shell"><p className="guide-status">{state.message}</p></main>
+  const toggle = (
+    <button
+      type="button"
+      className="guide-toggle"
+      aria-label="Toggle dark mode"
+      onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+    >
+      {theme === 'dark' ? '☀ Light' : '☾ Dark'}
+    </button>
+  )
+
+  if (state.status === 'loading') {
+    return (
+      <main className="guide-shell">
+        <header className="guide-head"><a className="guide-brand" href="/">simply</a>{toggle}</header>
+        <p className="guide-status">Loading guide…</p>
+      </main>
+    )
+  }
+  if (state.status === 'error') {
+    return (
+      <main className="guide-shell">
+        <header className="guide-head"><a className="guide-brand" href="/">simply</a>{toggle}</header>
+        <p className="guide-status">{state.message}</p>
+      </main>
+    )
+  }
 
   const { guide } = state
   return (
     <main className="guide-shell" ref={contentRef}>
       <header className="guide-head">
         <a className="guide-brand" href="/">simply</a>
-        <span className={`guide-badge ${guide.mode}`}>{guide.mode === 'ai' ? 'AI guide' : 'Basic mode'}</span>
+        <div className="guide-head-end">
+          <span className={`guide-badge ${guide.mode}`}>{guide.mode === 'ai' ? 'AI guide' : 'Basic mode'}</span>
+          {toggle}
+        </div>
       </header>
       <h1 className="guide-title">{guide.title}</h1>
       <p className="guide-overview">{guide.overview || guide.summary}</p>
@@ -139,7 +182,7 @@ function GuidePage() {
             {lesson.example && (
               <div className="guide-block"><span className="guide-label">Example</span><p>{lesson.example}</p></div>
             )}
-            {lesson.diagram && <MermaidDiagram code={lesson.diagram} />}
+            {lesson.diagram && <MermaidDiagram code={lesson.diagram} theme={theme} />}
             {lesson.inThisPaper && (
               <p className="guide-inpaper"><span className="guide-label">In this paper</span> {lesson.inThisPaper}</p>
             )}
