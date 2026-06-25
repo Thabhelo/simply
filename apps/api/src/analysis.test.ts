@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectBasic, projectConcepts, lessonsFromBasic, lessonFromPrereq, nextSteps, buildDetectInput, cacheKey, filterBuildsOn } from './analysis.js'
+import { detectBasic, projectConcepts, lessonsFromBasic, lessonFromPrereq, nextSteps, buildDetectInput, cacheKey, filterBuildsOn, cleanDiagram } from './analysis.js'
 
 describe('detectBasic', () => {
   it('matches concepts present in the text', () => {
@@ -74,6 +74,19 @@ describe('filterBuildsOn', () => {
       { area: 'Calculus', concept: 'Gradient', evidenceQuote: '', whyAssumed: '', buildsOn: ['Vectors', 'Ghost concept', 'Gradient'] },
     ])
     expect(out[1].buildsOn).toEqual(['Vectors'])
+  })
+})
+
+describe('cleanDiagram', () => {
+  it('keeps a trimmed flowchart/graph diagram', () => {
+    expect(cleanDiagram('  flowchart LR\n  A-->B  ')).toBe('flowchart LR\n  A-->B')
+    expect(cleanDiagram('graph TD\nA-->B')).toBe('graph TD\nA-->B')
+  })
+  it('drops empty, prose, and non-flowchart content', () => {
+    expect(cleanDiagram(undefined)).toBeUndefined()
+    expect(cleanDiagram('')).toBeUndefined()
+    expect(cleanDiagram('Here is a diagram: A to B')).toBeUndefined()
+    expect(cleanDiagram('sequenceDiagram\nA->>B: hi')).toBeUndefined()
   })
 })
 

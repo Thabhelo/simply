@@ -7,6 +7,7 @@ export type Lesson = {
   area: Area; concept: string; title: string
   hook: string; definition: string; intuition: string; example: string; inThisPaper: string
   buildsOn: string[]
+  diagram?: string
 }
 export type ConceptCard = { area: Area; term: string; plainEnglish: string; whyItMatters: string }
 export type Guide = {

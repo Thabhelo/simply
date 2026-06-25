@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { GoogleGenAI, Type } from '@google/genai'
 import { AREAS, maxLessons } from './types.js'
 import type { Prerequisite, Lesson, Guide } from './types.js'
-import { buildDetectInput, detectBasic, lessonsFromBasic, lessonFromPrereq, projectConcepts, nextSteps, cacheKey, filterBuildsOn } from './analysis.js'
+import { buildDetectInput, detectBasic, lessonsFromBasic, lessonFromPrereq, projectConcepts, nextSteps, cacheKey, filterBuildsOn, cleanDiagram } from './analysis.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
@@ -448,14 +448,15 @@ const lessonResponseSchema = {
     intuition: { type: Type.STRING },
     example: { type: Type.STRING },
     inThisPaper: { type: Type.STRING },
+    diagram: { type: Type.STRING },
   },
   required: ['title', 'hook', 'definition', 'intuition', 'example', 'inThisPaper'],
 }
 
 const TEACH_SYSTEM =
-  'Write a compact pedagogical refresher lesson for someone about to read a research paper. Include: a one-sentence plain-language hook or analogy; a precise definition; 2-3 sentences of intuition; one short worked example with steps; and one line on how the concept shows up in this paper. Write ALL math as KaTeX-compatible LaTeX — inline as $ ... $ and display as $$ ... $$. Calm and clear — a refresher, not a textbook chapter.'
+  'Write a compact pedagogical refresher lesson for someone about to read a research paper. Include: a one-sentence plain-language hook or analogy; a precise definition; 2-3 sentences of intuition; one short worked example with steps; and one line on how the concept shows up in this paper. Write ALL math as KaTeX-compatible LaTeX — inline as $ ... $ and display as $$ ... $$. Calm and clear — a refresher, not a textbook chapter. If — and only if — a small diagram genuinely clarifies the concept (a process, pipeline, or relationship), include a diagram field containing a Mermaid flowchart (flowchart LR or flowchart TD), 3-7 nodes, short plain-text labels (no LaTeX or $ in labels). Omit diagram entirely when it would not add real value.'
 
-type TeachLesson = { title: string; hook: string; definition: string; intuition: string; example: string; inThisPaper: string }
+type TeachLesson = { title: string; hook: string; definition: string; intuition: string; example: string; inThisPaper: string; diagram?: string }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -477,7 +478,7 @@ async function generateLesson(p: Prerequisite, paperTitle: string): Promise<Less
       const text = response.text
       if (!text) throw new Error('empty lesson')
       const t = JSON.parse(text) as TeachLesson
-      return { ...t, area: p.area, concept: p.concept, buildsOn: p.buildsOn }
+      return { ...t, area: p.area, concept: p.concept, buildsOn: p.buildsOn, diagram: cleanDiagram(t.diagram) }
     } catch (error) {
       lastError = error
       if (!isTransient(error) || attempt === 2) throw error // retry only transient errors; lessonFromPrereq is the final fallback in teachAll

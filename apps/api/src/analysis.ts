@@ -81,6 +81,11 @@ export const nextSteps = [
   'Export this guide as a PDF and keep it beside the paper.',
 ]
 
+export function cleanDiagram(d?: string): string | undefined {
+  const t = (d ?? '').trim()
+  return /^(flowchart|graph)\b/.test(t) ? t : undefined
+}
+
 export function lessonFromPrereq(p: Prerequisite): Lesson {
   return {
     area: p.area, concept: p.concept, title: p.concept,
