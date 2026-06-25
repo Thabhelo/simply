@@ -1,12 +1,46 @@
 import { useEffect, useRef, useState } from 'react'
 import renderMathInElement from 'katex/contrib/auto-render'
 import 'katex/dist/katex.min.css'
+import mermaid from 'mermaid'
 import './GuidePage.css'
 
 // TEMPORARY dev/reference viewer for the rich guide. Thabhelo's frontend replaces this
 // with the designed /guide page. Renders the Guide from GET /api/guide/:id with KaTeX math.
 
 const apiBase = 'http://localhost:8787'
+
+// Init mermaid once at module scope. securityLevel:'strict' sanitizes labels (DOMPurify)
+// and disables click/HTML — required since diagram text is untrusted model output.
+mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', theme: 'neutral' })
+
+let diagramSeq = 0
+
+// Renders a Mermaid diagram safely. Invalid or unparseable input renders nothing
+// (no error graphic), mirroring KaTeX throwOnError:false.
+function MermaidDiagram({ code }: { code: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    let cancelled = false
+    const el = ref.current
+    if (!el) return
+    el.innerHTML = '' // clear (survives StrictMode double-invoke)
+    const id = `mmd-${diagramSeq++}`
+    ;(async () => {
+      try {
+        const ok = await mermaid.parse(code, { suppressErrors: true })
+        if (!ok || cancelled) return
+        const { svg } = await mermaid.render(id, code)
+        if (!cancelled && ref.current) ref.current.innerHTML = svg // mermaid strict-mode output is sanitized
+      } catch {
+        if (ref.current) ref.current.innerHTML = '' // invalid → render nothing, no error graphic
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [code])
+  return <div className="guide-diagram" ref={ref} />
+}
 
 type Lesson = {
   area: string
@@ -18,6 +52,7 @@ type Lesson = {
   example: string
   inThisPaper: string
   buildsOn: string[]
+  diagram?: string
 }
 
 type Guide = {
@@ -104,6 +139,7 @@ function GuidePage() {
             {lesson.example && (
               <div className="guide-block"><span className="guide-label">Example</span><p>{lesson.example}</p></div>
             )}
+            {lesson.diagram && <MermaidDiagram code={lesson.diagram} />}
             {lesson.inThisPaper && (
               <p className="guide-inpaper"><span className="guide-label">In this paper</span> {lesson.inThisPaper}</p>
             )}
