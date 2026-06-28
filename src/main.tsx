@@ -2,9 +2,12 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import GuidePage from './GuidePage.tsx'
+
+const isGuide = window.location.pathname === '/guide'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {isGuide ? <GuidePage /> : <App />}
   </StrictMode>,
 )

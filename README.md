@@ -73,3 +73,27 @@ curl -X POST http://localhost:8787/api/analyze \
     "text": "dropout variational inference KL divergence gradient sampling"
   }'
 ```
+
+## AI analysis
+
+Set a Google Gemini API key to get the full prerequisite guide:
+
+```bash
+echo "GEMINI_API_KEY=..." > apps/api/.env
+```
+
+With a key, the API produces a **rich, pedagogical guide**. Each lesson is built
+to teach, not just define: a one-line **hook**, a precise **definition**, an
+**intuition**, a **worked example**, and an **"in this paper"** note that ties
+the concept back to the source. Math is rendered as **LaTeX**. The guide also
+carries a guide-level **overview**, an ordered **reading path** through the
+lessons, and `buildsOn` cross-links so each lesson points at the prerequisites
+it depends on.
+
+The full guide is viewed as an **HTML page**, opened from the extension or via a
+shareable `/guide?id=…` URL. The backend serves the rendered guide from
+`GET /api/guide/:id`.
+
+Without a key, the API runs in **basic mode** (deterministic regex concept
+detection) so the demo still works offline. Each analysis is cached in memory
+per paper, so repeat requests for the same paper are instant.

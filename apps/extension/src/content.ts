@@ -5,12 +5,36 @@ type PaperPayload = {
 }
 
 type AnalysisResponse = {
+  id?: string
   title: string
+  overview?: string
   concepts: Array<{ term: string; area: string }>
+  mode?: 'ai' | 'basic'
+  lessons?: Array<{
+    area: string
+    concept: string
+    title: string
+    hook: string
+    definition: string
+    intuition: string
+    example: string
+    inThisPaper: string
+    buildsOn: string[]
+  }>
   ingestion?: { source: string; textLength: number }
 }
 
+function escapeHtml(value: string): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 const apiBase = 'http://localhost:8787'
+const webBase = 'http://localhost:5173' // dev frontend; hardcoded for now (configurable for prod — see deploy notes)
 const widgetId = 'simply-research-widget'
 
 function getMeta(name: string) {
@@ -78,10 +102,10 @@ function getPaperText(): PaperPayload {
   }
 }
 
-function renderConceptList(concepts: AnalysisResponse['concepts']) {
-  return concepts
-    .slice(0, 4)
-    .map((concept) => `<li><span>${concept.area}</span>${concept.term}</li>`)
+function renderLessonTeaser(lessons: AnalysisResponse['lessons']) {
+  return (lessons ?? [])
+    .slice(0, 3)
+    .map((l) => `<li><span>${escapeHtml(l.area)}</span><strong>${escapeHtml(l.title)}</strong></li>`)
     .join('')
 }
 
@@ -108,14 +132,16 @@ function mountWidget() {
         backdrop-filter: blur(22px) saturate(180%);
         border: 1px solid rgba(0, 0, 0, 0.08);
         border-radius: 22px;
-        bottom: 24px;
         box-shadow: 0 24px 64px rgba(15, 23, 42, 0.14);
         box-sizing: border-box;
         color: #111;
         padding: 16px;
         position: fixed;
         right: 24px;
+        top: 24px;
         width: 320px;
+        max-height: min(72vh, 600px);
+        overflow-y: auto;
         z-index: 2147483647;
       }
 
@@ -149,16 +175,22 @@ function mountWidget() {
       }
 
       p, .status {
-        color: rgba(0, 0, 0, 0.58);
-        font-size: 13px;
-        line-height: 1.45;
+        color: rgba(0, 0, 0, 0.62);
+        font-size: 14px;
+        line-height: 1.5;
         margin: 0;
       }
 
       .actions {
         display: flex;
+        flex-wrap: wrap;
         gap: 8px;
         margin-top: 14px;
+      }
+
+      .open {
+        margin-top: 12px;
+        width: 100%;
       }
 
       button {
@@ -193,22 +225,29 @@ function mountWidget() {
         background: rgba(0, 0, 0, 0.035);
         border-radius: 12px;
         color: #111;
-        font-size: 13px;
-        padding: 9px 10px;
+        padding: 10px 12px;
       }
 
       li span {
-        color: rgba(0, 0, 0, 0.48);
+        color: #5b4bff;
         display: block;
-        font-size: 10px;
-        margin-bottom: 3px;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        margin-bottom: 4px;
         text-transform: uppercase;
+      }
+
+      li strong {
+        display: block;
+        font-size: 14px;
+        font-weight: 600;
       }
 
       @keyframes slide-in {
         from {
           opacity: 0;
-          transform: translateY(12px) translateX(18px);
+          transform: translateY(-12px) translateX(18px);
         }
 
         to {
@@ -230,6 +269,7 @@ function mountWidget() {
       </div>
       <div class="status" id="simply-status"></div>
       <ul id="simply-results"></ul>
+      <button class="primary open" id="simply-open" type="button" hidden>Open full guide ↗</button>
     </section>
   `
 
@@ -237,24 +277,32 @@ function mountWidget() {
 
   const analyzeButton = shadow.querySelector<HTMLButtonElement>('#simply-analyze')
   const dismissButton = shadow.querySelector<HTMLButtonElement>('#simply-dismiss')
+  const openButton = shadow.querySelector<HTMLButtonElement>('#simply-open')
   const statusEl = shadow.querySelector<HTMLElement>('#simply-status')
   const resultsEl = shadow.querySelector<HTMLElement>('#simply-results')
 
+  let lastPayload: PaperPayload | null = null
+  let lastGuideId: string | null = null
+
   dismissButton?.addEventListener('click', () => host.remove())
+
   analyzeButton?.addEventListener('click', async () => {
-    if (!statusEl || !resultsEl || !analyzeButton) {
+    if (!statusEl || !resultsEl || !analyzeButton || !openButton) {
       return
     }
 
     analyzeButton.disabled = true
+    openButton.hidden = true
     statusEl.textContent = 'Reading the paper...'
     resultsEl.innerHTML = ''
 
     try {
+      const payload = getPaperText()
+      lastPayload = payload
       const response = await fetch(`${apiBase}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(getPaperText()),
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -262,14 +310,29 @@ function mountWidget() {
       }
 
       const analysis = (await response.json()) as AnalysisResponse
-      statusEl.textContent = `Found ${analysis.concepts.length} prerequisite ideas.`
-      resultsEl.innerHTML = renderConceptList(analysis.concepts)
+      lastGuideId = analysis.id ?? null
+      const count = (analysis.lessons ?? []).length
+      statusEl.textContent = count
+        ? `Found ${count} prerequisite ideas. Open the full guide for the lessons.`
+        : 'No prerequisites detected for this page.'
+      resultsEl.innerHTML = renderLessonTeaser(analysis.lessons)
+      openButton.hidden = count === 0
     } catch (error) {
       statusEl.textContent =
         error instanceof Error ? error.message : 'Could not reach the Simply API.'
     } finally {
       analyzeButton.disabled = false
     }
+  })
+
+  openButton?.addEventListener('click', () => {
+    if (!statusEl || !openButton) return
+    if (!lastGuideId) {
+      statusEl.textContent = 'Analyze first.'
+      return
+    }
+    window.open(`${webBase}/guide?id=${encodeURIComponent(lastGuideId)}`, '_blank', 'noopener')
+    statusEl.textContent = 'Opened the full guide in a new tab.'
   })
 }
 

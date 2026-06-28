@@ -4,11 +4,28 @@ import express from 'express'
 import { PDFParse } from 'pdf-parse'
 import PDFDocument from 'pdfkit'
 import { z } from 'zod'
+import { GoogleGenAI, Type } from '@google/genai'
+import { AREAS, maxLessons } from './types.js'
+import type { Prerequisite, Lesson, Guide } from './types.js'
+import { buildDetectInput, detectBasic, lessonsFromBasic, lessonFromPrereq, projectConcepts, nextSteps, cacheKey, filterBuildsOn, cleanDiagram } from './analysis.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
 const maxTextLength = 120_000
 const maxPdfBytes = 25 * 1024 * 1024
+
+// gemini-2.5-flash is the README-documented stable Flash id; gemini-3.5-flash may be current — flip here if your key has access
+const DETECT_MODEL = 'gemini-2.5-flash'
+const TEACH_MODEL = 'gemini-2.5-flash'
+const maxDetectChars = maxTextLength // feed the full ingested paper (bounded to 120k) — Gemini's large context is the reason for switching
+
+const apiKey = process.env.GEMINI_API_KEY
+const genai = apiKey ? new GoogleGenAI({ apiKey }) : null
+console.log(
+  genai
+    ? `Simply: AI mode enabled (${DETECT_MODEL})`
+    : 'Simply: GEMINI_API_KEY not set — running in basic mode',
+)
 
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
@@ -39,66 +56,6 @@ type ResolvedPaper = {
   arxivId?: string
   pdfUrl?: string
 }
-
-type Concept = {
-  area: 'Probability' | 'Statistics' | 'Linear algebra' | 'Calculus' | 'Optimization' | 'ML'
-  term: string
-  whyItMatters: string
-  plainEnglish: string
-  triggers: RegExp[]
-}
-
-const concepts: Concept[] = [
-  {
-    area: 'Probability',
-    term: 'Bayesian inference',
-    whyItMatters: 'Many ML papers model uncertainty by updating beliefs after seeing data.',
-    plainEnglish: 'Start with a belief, observe evidence, and revise the belief.',
-    triggers: [/bayes/i, /posterior/i, /prior/i],
-  },
-  {
-    area: 'Probability',
-    term: 'KL divergence',
-    whyItMatters: 'It appears when papers compare an approximate distribution with a target distribution.',
-    plainEnglish: 'A one-way penalty for how poorly one probability distribution imitates another.',
-    triggers: [/kl divergence/i, /kullback/i, /relative entropy/i],
-  },
-  {
-    area: 'Statistics',
-    term: 'Monte Carlo estimation',
-    whyItMatters: 'Papers use sampling when exact expectations are too expensive to compute.',
-    plainEnglish: 'Estimate a hard average by drawing many random examples and averaging them.',
-    triggers: [/monte carlo/i, /sampling/i, /sampled/i],
-  },
-  {
-    area: 'Linear algebra',
-    term: 'Vectors and matrices',
-    whyItMatters: 'Model inputs, weights, embeddings, and transformations are usually matrix-shaped.',
-    plainEnglish: 'Vectors store lists of numbers; matrices transform those lists into new lists.',
-    triggers: [/matrix/i, /matrices/i, /vector/i, /linear/i],
-  },
-  {
-    area: 'Calculus',
-    term: 'Gradient',
-    whyItMatters: 'Gradients tell learning algorithms which direction changes the loss fastest.',
-    plainEnglish: 'A gradient is a slope for many variables at once.',
-    triggers: [/gradient/i, /derivative/i, /differentiat/i],
-  },
-  {
-    area: 'Optimization',
-    term: 'Variational inference',
-    whyItMatters: 'It turns an impossible inference problem into a trainable optimization problem.',
-    plainEnglish: 'Pick a simpler family of distributions and tune it until it mimics the hard one.',
-    triggers: [/variational/i, /evidence lower bound/i, /\belbo\b/i],
-  },
-  {
-    area: 'ML',
-    term: 'Dropout',
-    whyItMatters: 'Dropout is a regularization method that also connects to uncertainty estimates.',
-    plainEnglish: 'Randomly hide parts of a neural network during training so it learns robust patterns.',
-    triggers: [/dropout/i, /regulari[sz]ation/i],
-  },
-]
 
 function normalizeWhitespace(text: string) {
   return text.replace(/\s+/g, ' ').trim().slice(0, maxTextLength)
@@ -368,31 +325,171 @@ async function resolvePaperInput(input: PaperRequest): Promise<ResolvedPaper> {
   }
 }
 
-function analyzePaper(input: ResolvedPaper) {
-  const normalizedText = `${input.title ?? ''}\n${input.url ?? ''}\n${input.text}`
-  const detected = concepts.filter((concept) =>
-    concept.triggers.some((trigger) => trigger.test(normalizedText)),
-  )
-  const fallback = detected.length > 0 ? detected : concepts.slice(0, 4)
-
+function basicMode(paper: ResolvedPaper, id: string): Guide {
+  const haystack = `${paper.title}\n${paper.url ?? ''}\n${paper.text}`
+  const lessons = lessonsFromBasic(detectBasic(haystack))
   return {
-    title: input.title?.trim() || 'Untitled research paper',
-    url: input.url,
-    summary:
-      'Simply found the prerequisite math and ML ideas that are likely to block a first pass through this paper.',
-    concepts: fallback.map(({ area, term, whyItMatters, plainEnglish }) => ({
-      area,
-      term,
-      whyItMatters,
-      plainEnglish,
-    })),
-    nextSteps: [
-      'Read the abstract and introduction once without stopping.',
-      'Review the prerequisite concepts below for 20 minutes.',
-      'Return to the methods section and annotate every symbol that repeats.',
-      'Export this guide as a PDF and keep it beside the paper.',
-    ],
+    id,
+    title: paper.title?.trim() || 'Untitled research paper',
+    url: paper.url,
+    summary: 'Simply found the prerequisite math and ML ideas that are likely to block a first pass through this paper.',
+    mode: 'basic',
+    overview: genai
+      ? 'AI lessons are temporarily unavailable (the model hit a rate or quota limit). These are the prerequisite areas this paper leans on.'
+      : 'Set GEMINI_API_KEY for full AI lessons. These are the prerequisite areas this paper leans on.',
+    lessons, concepts: projectConcepts(lessons), nextSteps,
   }
+}
+
+async function aiMode(paper: ResolvedPaper, id: string): Promise<Guide> {
+  const { overview, prerequisites } = await detectGuide(paper)
+  if (prerequisites.length === 0) {
+    console.warn('Simply: detect returned no prerequisites — using basic mode')
+    return basicMode(paper, id)
+  }
+  const lessons = await teachAll(prerequisites, paper.title)
+  return {
+    id,
+    title: paper.title?.trim() || 'Untitled research paper',
+    url: paper.url,
+    summary: 'Simply built short refresher lessons for the prerequisite ideas this paper assumes.',
+    mode: 'ai',
+    overview,
+    lessons, concepts: projectConcepts(lessons), nextSteps,
+  }
+}
+
+const guideCache = new Map<string, Guide>()
+const maxCacheEntries = 200
+
+async function analyzePaper(paper: ResolvedPaper): Promise<Guide> {
+  const id = cacheKey(paper.title, paper.url, paper.text)
+  const cached = guideCache.get(id)
+  if (cached && cached.mode === 'ai') return cached // reuse ai; always recompute basic
+  let guide: Guide
+  if (!genai) {
+    guide = basicMode(paper, id)
+  } else {
+    try {
+      guide = await aiMode(paper, id)
+    } catch (error) {
+      console.error('Simply: AI analysis failed — using basic mode:', error instanceof Error ? error.message : error)
+      guide = basicMode(paper, id)
+    }
+  }
+  if (guideCache.size >= maxCacheEntries) {
+    // Evict the oldest BASIC entry first so a burst of basic-mode results can't push out cached ai guides.
+    let victim: string | undefined
+    for (const [k, g] of guideCache) {
+      if (k === id) continue
+      if (g.mode === 'basic') { victim = k; break }
+      if (victim === undefined) victim = k // fallback: oldest non-current entry
+    }
+    if (victim !== undefined) guideCache.delete(victim)
+  }
+  guideCache.set(id, guide) // store last guide (ai or basic) so GET /api/guide/:id can serve it
+  return guide
+}
+
+const detectResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    overview: { type: Type.STRING },
+    prerequisites: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          area: { type: Type.STRING, enum: AREAS as unknown as string[] },
+          concept: { type: Type.STRING },
+          evidenceQuote: { type: Type.STRING },
+          whyAssumed: { type: Type.STRING },
+          buildsOn: { type: Type.ARRAY, items: { type: Type.STRING } },
+        },
+        required: ['area', 'concept', 'evidenceQuote', 'whyAssumed', 'buildsOn'],
+      },
+    },
+  },
+  required: ['overview', 'prerequisites'],
+}
+
+const DETECT_SYSTEM =
+  'You help a reader who is about to read a research paper. Identify the prerequisite math and ML concepts the paper assumes the reader already knows. Order them by what to learn first. For each: quote the exact span from the text that shows the assumption (evidenceQuote), say why the reader needs it (whyAssumed), and set buildsOn to the concepts IN THIS LIST that it depends on (use the exact concept strings; empty if none). Also write a 2-4 sentence overview of what the paper assumes and how to prepare. Only list concepts that actually appear — never invent. List at most 6 prerequisites.'
+
+type DetectResult = { overview: string; prerequisites: Prerequisite[] }
+
+async function detectGuide(paper: ResolvedPaper): Promise<DetectResult> {
+  if (!genai) return { overview: '', prerequisites: [] }
+  const input = buildDetectInput(paper.title, paper.text, maxDetectChars)
+  const response = await genai.models.generateContent({
+    model: DETECT_MODEL,
+    contents: input,
+    config: { systemInstruction: DETECT_SYSTEM, responseMimeType: 'application/json', responseSchema: detectResponseSchema },
+  })
+  const text = response.text
+  if (!text) {
+    console.warn('Simply: detect returned no structured output')
+    return { overview: '', prerequisites: [] }
+  }
+  // JSON.parse can throw on a malformed response — analyzePaper try/catches the whole call, so a throw -> basic mode
+  const parsed = JSON.parse(text) as { overview?: string; prerequisites?: Prerequisite[] }
+  const prerequisites = filterBuildsOn(
+    (parsed.prerequisites ?? []).filter((p) => AREAS.includes(p.area)).slice(0, maxLessons),
+  )
+  return { overview: parsed.overview ?? '', prerequisites }
+}
+
+const lessonResponseSchema = {
+  type: Type.OBJECT,
+  properties: {
+    title: { type: Type.STRING },
+    hook: { type: Type.STRING },
+    definition: { type: Type.STRING },
+    intuition: { type: Type.STRING },
+    example: { type: Type.STRING },
+    inThisPaper: { type: Type.STRING },
+    diagram: { type: Type.STRING },
+  },
+  required: ['title', 'hook', 'definition', 'intuition', 'example', 'inThisPaper'],
+}
+
+const TEACH_SYSTEM =
+  'Write a compact pedagogical refresher lesson for someone about to read a research paper. Include: a one-sentence plain-language hook or analogy; a precise definition; 2-3 sentences of intuition; one short worked example with steps; and one line on how the concept shows up in this paper. Write ALL math as KaTeX-compatible LaTeX — inline as $ ... $ and display as $$ ... $$. Calm and clear — a refresher, not a textbook chapter. If — and only if — a small diagram genuinely clarifies the concept (a process, pipeline, or relationship), include a diagram field containing a Mermaid flowchart (flowchart LR or flowchart TD), 3-7 nodes. Put the flowchart header and EACH edge on its OWN line (one statement per line, e.g. "flowchart LR\\n  A --> B\\n  B --> C"). Node labels must use ONLY letters, numbers and spaces — no parentheses, brackets, quotes, math symbols, or LaTeX. Omit diagram entirely when it would not add real value.'
+
+type TeachLesson = { title: string; hook: string; definition: string; intuition: string; example: string; inThisPaper: string; diagram?: string }
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+// Gemini Flash returns transient 503/UNAVAILABLE/429 under load; these are worth a quick retry.
+function isTransient(error: unknown): boolean {
+  const m = (error instanceof Error ? error.message : String(error)).toLowerCase()
+  return m.includes('503') || m.includes('unavailable') || m.includes('429') || m.includes('resource_exhausted') || m.includes('overloaded')
+}
+
+async function generateLesson(p: Prerequisite, paperTitle: string): Promise<Lesson> {
+  if (!genai) throw new Error('no client')
+  const contents = `Concept: ${p.concept}\nArea: ${p.area}\nPaper: ${paperTitle}\nThe paper assumes (evidence): "${p.evidenceQuote}"\nWhy the reader needs it: ${p.whyAssumed}`
+  const config = { systemInstruction: TEACH_SYSTEM, responseMimeType: 'application/json', responseSchema: lessonResponseSchema }
+  let lastError: unknown
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await sleep(attempt * 400 + Math.floor(Math.random() * 200)) // ~0.4-0.6s, ~0.8-1.0s backoff + jitter
+    try {
+      const response = await genai.models.generateContent({ model: TEACH_MODEL, contents, config })
+      const text = response.text
+      if (!text) throw new Error('empty lesson')
+      const t = JSON.parse(text) as TeachLesson
+      return { ...t, area: p.area, concept: p.concept, buildsOn: p.buildsOn, diagram: cleanDiagram(t.diagram) }
+    } catch (error) {
+      lastError = error
+      if (!isTransient(error) || attempt === 2) throw error // retry only transient errors; lessonFromPrereq is the final fallback in teachAll
+    }
+  }
+  throw lastError
+}
+
+async function teachAll(prereqs: Prerequisite[], paperTitle: string): Promise<Lesson[]> {
+  const settled = await Promise.allSettled(prereqs.map((p) => generateLesson(p, paperTitle)))
+  return settled.map((res, i) => (res.status === 'fulfilled' ? res.value : lessonFromPrereq(prereqs[i])))
 }
 
 app.get('/health', (_request, response) => {
@@ -436,9 +533,10 @@ app.post('/api/analyze', async (request, response) => {
 
   try {
     const paper = await resolvePaperInput(parsed.data)
+    const guide = await analyzePaper(paper)
 
     response.json({
-      ...analyzePaper(paper),
+      ...guide,
       ingestion: {
         source: paper.source,
         textLength: paper.text.length,
@@ -453,6 +551,15 @@ app.post('/api/analyze', async (request, response) => {
   }
 })
 
+app.get('/api/guide/:id', (request, response) => {
+  const guide = guideCache.get(request.params.id)
+  if (!guide) {
+    response.status(404).json({ error: 'Guide not found — re-analyze the paper.' })
+    return
+  }
+  response.json(guide)
+})
+
 app.post('/api/report.pdf', async (request, response) => {
   const parsed = paperRequestSchema.safeParse(request.body)
 
@@ -463,23 +570,28 @@ app.post('/api/report.pdf', async (request, response) => {
 
   try {
     const paper = await resolvePaperInput(parsed.data)
-    const report = analyzePaper(paper)
+    const report = await analyzePaper(paper)
     const document = new PDFDocument({ margin: 48 })
-
     response.setHeader('Content-Type', 'application/pdf')
     response.setHeader('Content-Disposition', 'attachment; filename="simply-guide.pdf"')
     document.pipe(response)
 
-    document.fontSize(26).text(`Simply Guide: ${report.title}`, { lineGap: 8 })
+    document.fontSize(26).fillColor('#101827').text(`Simply Guide: ${report.title}`, { lineGap: 8 })
     document.moveDown()
-    document.fontSize(12).fillColor('#475467').text(report.summary)
+    document.fontSize(12).fillColor('#667085').text(report.overview || report.summary)
+    if (report.mode === 'basic') {
+      document.moveDown(0.5).fontSize(10).fillColor('#c24a1a').text(genai ? 'Basic mode — AI lessons hit a rate/quota limit; showing prerequisite areas only.' : 'Basic mode — set GEMINI_API_KEY for full AI lessons.')
+    }
     document.moveDown()
 
-    report.concepts.forEach((concept, index) => {
-      document.fillColor('#101827').fontSize(16).text(`${index + 1}. ${concept.term}`)
-      document.fillColor('#5b4bff').fontSize(10).text(concept.area.toUpperCase())
-      document.fillColor('#344054').fontSize(12).text(`Why it matters: ${concept.whyItMatters}`)
-      document.text(`Plain English: ${concept.plainEnglish}`)
+    report.lessons.forEach((lesson, index) => {
+      document.fillColor('#5b4bff').fontSize(10).text(lesson.area.toUpperCase())
+      document.fillColor('#101827').fontSize(16).text(`${index + 1}. ${lesson.title}`)
+      if (lesson.hook) document.fillColor('#344054').fontSize(12).text(lesson.hook)
+      if (lesson.definition) document.fillColor('#101827').fontSize(11).text(`Definition: ${lesson.definition}`)
+      document.fillColor('#344054').fontSize(12).text(lesson.intuition)
+      if (lesson.example) document.fillColor('#344054').fontSize(12).text(`Example: ${lesson.example}`)
+      document.fillColor('#667085').fontSize(11).text(`In this paper: ${lesson.inThisPaper}`)
       document.moveDown()
     })
 
@@ -487,6 +599,10 @@ app.post('/api/report.pdf', async (request, response) => {
     report.nextSteps.forEach((step) => document.fillColor('#344054').fontSize(12).text(`- ${step}`))
     document.end()
   } catch (error) {
+    if (response.headersSent) {
+      response.end() // streaming already started; cannot send a 422 body
+      return
+    }
     response.status(422).json({
       error: error instanceof Error ? error.message : 'Could not generate a report for this paper.',
     })

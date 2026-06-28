@@ -6,18 +6,36 @@ type PaperPayload = {
   text?: string
 }
 
-type Concept = {
+type Lesson = {
   area: string
-  term: string
-  whyItMatters: string
-  plainEnglish: string
+  concept: string
+  title: string
+  hook: string
+  definition: string
+  intuition: string
+  example: string
+  inThisPaper: string
+  buildsOn: string[]
 }
 
 type AnalysisResponse = {
+  id?: string
   title: string
+  overview?: string
   summary: string
-  concepts: Concept[]
+  mode?: 'ai' | 'basic'
+  lessons?: Lesson[]
+  concepts: { area: string; term: string; whyItMatters: string; plainEnglish: string }[]
   nextSteps: string[]
+}
+
+function escapeHtml(value: string): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 }
 
 const apiBase = 'http://localhost:8787'
@@ -89,28 +107,27 @@ async function collectPaper(): Promise<PaperPayload> {
 }
 
 function renderAnalysis(analysis: AnalysisResponse) {
-  if (!resultsEl) {
-    return
-  }
-
+  if (!resultsEl) return
+  const lessons = analysis.lessons ?? []
+  const badge = analysis.mode === 'basic' ? '<span class="mode-badge">Basic mode</span>' : ''
   resultsEl.innerHTML = `
-    <h2>${analysis.title}</h2>
-    <p>${analysis.summary}</p>
-    <div class="concepts">
-      ${analysis.concepts
+    <div class="result-head"><h2>${escapeHtml(analysis.title)}</h2>${badge}</div>
+    <p>${escapeHtml(analysis.summary)}</p>
+    <div class="lessons">
+      ${lessons
         .map(
-          (concept) => `
-            <article>
-              <span>${concept.area}</span>
-              <h3>${concept.term}</h3>
-              <p>${concept.plainEnglish}</p>
-              <small>${concept.whyItMatters}</small>
-            </article>
-          `,
+          (l) => `
+            <article class="lesson">
+              <span>${escapeHtml(l.area)}</span>
+              <h3>${escapeHtml(l.title)}</h3>
+              <p>${escapeHtml(l.intuition)}</p>
+              ${l.definition ? `<code class="formula">${escapeHtml(l.definition)}</code>` : ''}
+              ${l.example ? `<p class="example">${escapeHtml(l.example)}</p>` : ''}
+              <small>${escapeHtml(l.inThisPaper)}</small>
+            </article>`,
         )
         .join('')}
-    </div>
-  `
+    </div>`
 }
 
 async function analyzeCurrentPage() {
