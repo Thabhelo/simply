@@ -42,10 +42,24 @@ export function createRequireAuth(opts: { enabled: boolean; verifyIdToken: Verif
   }
 }
 
-// Loads a service account from FIREBASE_SERVICE_ACCOUNT (inline JSON) or a file path in
-// FIREBASE_SERVICE_ACCOUNT_PATH / GOOGLE_APPLICATION_CREDENTIALS. Returns null if none is
-// configured or it can't be parsed — the caller then runs in dev open mode.
+// Loads a service account from, in order:
+//   1. FIREBASE_SERVICE_ACCOUNT_B64 — base64 of the JSON (recommended for CI/hosts; no
+//      multiline/quote escaping headaches).
+//   2. FIREBASE_SERVICE_ACCOUNT — the raw JSON string.
+//   3. FIREBASE_SERVICE_ACCOUNT_PATH / GOOGLE_APPLICATION_CREDENTIALS — a file path (local dev).
+// Returns null if none is configured or it can't be parsed — the caller then runs in dev
+// open mode. Never commit the key: use an env var in deployed/CI environments.
 function loadServiceAccount(): Record<string, unknown> | null {
+  const base64 = process.env.FIREBASE_SERVICE_ACCOUNT_B64
+  if (base64) {
+    try {
+      return JSON.parse(Buffer.from(base64, 'base64').toString('utf8'))
+    } catch {
+      console.warn('Simply: FIREBASE_SERVICE_ACCOUNT_B64 is not valid base64 JSON — ignoring.')
+      return null
+    }
+  }
+
   const inline = process.env.FIREBASE_SERVICE_ACCOUNT
   if (inline) {
     try {
