@@ -8,6 +8,7 @@ import { GoogleGenAI, Type } from '@google/genai'
 import { AREAS, maxLessons } from './types.js'
 import type { Prerequisite, Lesson, Guide } from './types.js'
 import { buildDetectInput, detectBasic, lessonsFromBasic, lessonFromPrereq, projectConcepts, nextSteps, cacheKey, filterBuildsOn, cleanDiagram } from './analysis.js'
+import { requireAuth } from './auth.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
@@ -27,6 +28,11 @@ console.log(
     : 'Simply: GEMINI_API_KEY not set — running in basic mode',
 )
 
+// CORS stays open by design: the extension content script calls the API from whatever
+// paper page the user is reading (arxiv.org, etc.), so the Origin is unpredictable. The
+// security boundary is the Firebase Bearer token (see requireAuth), not CORS — and because
+// we use tokens rather than cookies, there are no ambient credentials for a cross-origin
+// site to abuse.
 app.use(cors())
 app.use(express.json({ limit: '5mb' }))
 
@@ -280,12 +286,57 @@ async function ingestHtmlPaper(url: string) {
   return { title, text, pdfUrl }
 }
 
+const FALLBACK_TITLE = 'Untitled research paper'
+
+// A title is "usable" only if the caller supplied a real one. The extension defaults
+// its title to FALLBACK_TITLE and always sends page text, so a missing-or-generic title
+// means we should still try to recover the real title from the URL.
+function usableTitle(title?: string) {
+  const trimmed = title?.trim()
+  return trimmed && trimmed !== FALLBACK_TITLE ? trimmed : undefined
+}
+
+// Best-effort title extraction from a paper URL without downloading the PDF/full body.
+// Used when text is provided (so we skip ingestion) but no real title came with it.
+async function resolveTitleFromUrl(url: string): Promise<string | undefined> {
+  try {
+    const source = getArxivSource(url)
+
+    if (source.absUrl) {
+      return await fetchArxivTitle(source.absUrl)
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'text/html,application/xhtml+xml',
+        'User-Agent': 'Simply/0.1 (paper ingestion; https://github.com/Thabhelo/simply)',
+      },
+    })
+
+    if (!response.ok) {
+      return undefined
+    }
+
+    const html = await response.text()
+    const title = normalizeWhitespace(decodeHtmlEntities(stripTags(extractTitle(html) ?? '')))
+
+    return title || undefined
+  } catch {
+    return undefined
+  }
+}
+
 async function resolvePaperInput(input: PaperRequest): Promise<ResolvedPaper> {
   const providedText = normalizeWhitespace(input.text ?? '')
 
   if (providedText) {
+    const title =
+      usableTitle(input.title) ??
+      (input.url ? await resolveTitleFromUrl(input.url) : undefined) ??
+      FALLBACK_TITLE
+
     return {
-      title: input.title?.trim() || 'Untitled research paper',
+      title,
       url: input.url,
       text: providedText,
       source: 'provided-text',
@@ -302,7 +353,7 @@ async function resolvePaperInput(input: PaperRequest): Promise<ResolvedPaper> {
     const page = await ingestHtmlPaper(input.url)
 
     return {
-      title: input.title?.trim() || page.title,
+      title: usableTitle(input.title) ?? page.title,
       url: input.url,
       text: page.text,
       source: 'html-ingestion',
@@ -316,7 +367,7 @@ async function resolvePaperInput(input: PaperRequest): Promise<ResolvedPaper> {
   ])
 
   return {
-    title: input.title?.trim() || title || source.arxivId || 'Untitled research paper',
+    title: usableTitle(input.title) ?? title ?? source.arxivId ?? FALLBACK_TITLE,
     url: input.url,
     text,
     source: 'pdf-ingestion',
@@ -496,7 +547,7 @@ app.get('/health', (_request, response) => {
   response.json({ ok: true, service: 'simply-api' })
 })
 
-app.post('/api/ingest', async (request, response) => {
+app.post('/api/ingest', requireAuth, async (request, response) => {
   const parsed = paperRequestSchema.safeParse(request.body)
 
   if (!parsed.success) {
@@ -523,7 +574,7 @@ app.post('/api/ingest', async (request, response) => {
   }
 })
 
-app.post('/api/analyze', async (request, response) => {
+app.post('/api/analyze', requireAuth, async (request, response) => {
   const parsed = paperRequestSchema.safeParse(request.body)
 
   if (!parsed.success) {
@@ -560,7 +611,7 @@ app.get('/api/guide/:id', (request, response) => {
   response.json(guide)
 })
 
-app.post('/api/report.pdf', async (request, response) => {
+app.post('/api/report.pdf', requireAuth, async (request, response) => {
   const parsed = paperRequestSchema.safeParse(request.body)
 
   if (!parsed.success) {
