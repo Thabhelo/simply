@@ -1,3 +1,5 @@
+import { authedFetch, NotSignedInError } from './auth.js'
+
 type PaperPayload = {
   title: string
   url: string
@@ -299,7 +301,7 @@ function mountWidget() {
     try {
       const payload = getPaperText()
       lastPayload = payload
-      const response = await fetch(`${apiBase}/api/analyze`, {
+      const response = await authedFetch(`${apiBase}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -318,8 +320,23 @@ function mountWidget() {
       resultsEl.innerHTML = renderLessonTeaser(analysis.lessons)
       openButton.hidden = count === 0
     } catch (error) {
-      statusEl.textContent =
-        error instanceof Error ? error.message : 'Could not reach the Simply API.'
+      if (error instanceof NotSignedInError) {
+        statusEl.textContent = 'Opening Google sign-in...'
+        // The background worker runs the sign-in (content scripts can't). On success, retry.
+        chrome.runtime.sendMessage({ type: 'SIMPLY_SIGN_IN' }, (response) => {
+          if (chrome.runtime.lastError) {
+            statusEl.textContent = 'Sign-in interrupted — click Analyze again.'
+            return
+          }
+          if (response?.ok) {
+            statusEl.textContent = 'Signed in — click Analyze again.'
+          } else {
+            statusEl.textContent = response?.error ?? 'Sign-in failed.'
+          }
+        })
+      } else {
+        statusEl.textContent = error instanceof Error ? error.message : 'Could not reach the Simply API.'
+      }
     } finally {
       analyzeButton.disabled = false
     }

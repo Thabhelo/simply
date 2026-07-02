@@ -1,4 +1,5 @@
 import './style.css'
+import { authedFetch, getSession, LAST_ERROR_KEY, NotSignedInError } from './auth.js'
 
 type PaperPayload = {
   title: string
@@ -43,6 +44,9 @@ const analyzeButton = document.querySelector<HTMLButtonElement>('#analyze')
 const downloadButton = document.querySelector<HTMLButtonElement>('#download')
 const statusEl = document.querySelector<HTMLElement>('#status')
 const resultsEl = document.querySelector<HTMLElement>('#results')
+const signInButton = document.querySelector<HTMLButtonElement>('#signin')
+const signOutButton = document.querySelector<HTMLButtonElement>('#signout')
+const authStatusEl = document.querySelector<HTMLElement>('#auth-status')
 
 let latestPayload: PaperPayload | null = null
 
@@ -135,7 +139,7 @@ async function analyzeCurrentPage() {
   latestPayload = await collectPaper()
   setStatus('Asking the local API...')
 
-  const response = await fetch(`${apiBase}/api/analyze`, {
+  const response = await authedFetch(`${apiBase}/api/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(latestPayload),
@@ -156,7 +160,7 @@ async function downloadGuide() {
   }
 
   setStatus('Generating PDF...')
-  const response = await fetch(`${apiBase}/api/report.pdf`, {
+  const response = await authedFetch(`${apiBase}/api/report.pdf`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(latestPayload),
@@ -172,14 +176,65 @@ async function downloadGuide() {
   setStatus('PDF opened in a new tab.')
 }
 
+function reportError(error: unknown) {
+  if (error instanceof NotSignedInError) {
+    setStatus(error.message)
+    return
+  }
+  setStatus(error instanceof Error ? error.message : 'Something went wrong.')
+}
+
+async function refreshAuthUi() {
+  const session = await getSession()
+  const signedIn = Boolean(session)
+  if (authStatusEl) {
+    authStatusEl.textContent = signedIn
+      ? session?.email
+        ? `Signed in as ${session.email}`
+        : 'Signed in'
+      : 'Not signed in'
+  }
+  if (signInButton) signInButton.hidden = signedIn
+  if (signOutButton) signOutButton.hidden = !signedIn
+
+  // Surface the last sign-in error (persisted) so it isn't lost when the popup closes.
+  if (!signedIn) {
+    const stored = await chrome.storage.local.get(LAST_ERROR_KEY)
+    const lastError = stored[LAST_ERROR_KEY] as string | undefined
+    if (lastError) setStatus(lastError)
+  }
+}
+
+
 analyzeButton?.addEventListener('click', () => {
-  analyzeCurrentPage().catch((error: unknown) => {
-    setStatus(error instanceof Error ? error.message : 'Something went wrong.')
-  })
+  analyzeCurrentPage().catch(reportError)
 })
 
 downloadButton?.addEventListener('click', () => {
-  downloadGuide().catch((error: unknown) => {
-    setStatus(error instanceof Error ? error.message : 'Something went wrong.')
+  downloadGuide().catch(reportError)
+})
+
+signInButton?.addEventListener('click', () => {
+  // Sign-in runs in the background worker (the popup closes when the Google window opens).
+  // The response may not arrive if this popup is torn down first — the worker persists the
+  // result to storage regardless, so reopening the popup reflects it.
+  setStatus('Opening Google sign-in...')
+  chrome.runtime.sendMessage({ type: 'SIMPLY_SIGN_IN' }, async (response) => {
+    if (chrome.runtime.lastError) return // popup likely closed; worker still completes
+    if (response?.ok) {
+      await refreshAuthUi()
+      setStatus(response.email ? `Signed in as ${response.email}.` : 'Signed in.')
+    } else if (response?.error) {
+      setStatus(response.error)
+    }
   })
 })
+
+signOutButton?.addEventListener('click', () => {
+  chrome.runtime.sendMessage({ type: 'SIMPLY_SIGN_OUT' }, async () => {
+    await refreshAuthUi()
+    setStatus('Signed out.')
+  })
+})
+
+void refreshAuthUi()

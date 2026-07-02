@@ -15,6 +15,10 @@ dist-ssr
 !.env.example
 *.local
 
+# Firebase secrets — service account private keys must never be committed
+*firebase-adminsdk*.json
+serviceAccountKey.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
