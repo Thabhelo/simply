@@ -17,6 +17,7 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "firebase-admin": "^14.1.0",
+    "mupdf": "^1.28.0",
     "pdf-parse": "^2.4.5",
     "pdfkit": "^0.17.2",
     "puppeteer-core": "^24.43.1",

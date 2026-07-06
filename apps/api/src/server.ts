@@ -12,7 +12,7 @@ import { buildDetectInput, detectBasic, lessonsFromBasic, lessonFromPrereq, proj
 import { cleanExcalidrawElements } from './sketch.js'
 import { requireAuth } from './auth.js'
 import { getCachedAiGuide, getGuide, guideStoreMode, saveGuide } from './guideStore.js'
-import { guideExportUrl, renderGuidePdf } from './pdfRender.js'
+import { guideExportUrl, renderGuidePdf, renderGuidePdfFlattened } from './pdfRender.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
@@ -889,8 +889,12 @@ app.get('/api/guide/:id/guide.pdf', async (request, response) => {
     response.status(404).json({ error: 'Guide not found. Re-analyze the paper.' })
     return
   }
+  // ?flatten=1 → image-only PDF (zero fonts) that renders in any viewer, for
+  // clients where the vector Type3 glyphs don't display (e.g. some in-app previews).
+  const flatten = request.query.flatten === '1' || request.query.flatten === 'true'
   try {
-    const pdf = await renderGuidePdf(guideExportUrl(id))
+    const url = guideExportUrl(id)
+    const pdf = flatten ? await renderGuidePdfFlattened(url) : await renderGuidePdf(url)
     response.setHeader('Content-Type', 'application/pdf')
     response.setHeader('Content-Disposition', `inline; filename="${sanitizePdfFilename(guide.title)}.pdf"`)
     response.send(pdf)
