@@ -1,4 +1,4 @@
-// Extension auth — Firebase sign-in without the Firebase Web SDK.
+// Extension auth: Firebase sign-in without the Firebase Web SDK.
 //
 // Flow: chrome.identity.launchWebAuthFlow gets a Google OpenID id_token, which we exchange
 // for a Firebase session via the Identity Toolkit REST endpoint (the REST equivalent of
@@ -7,19 +7,26 @@
 // secure-token endpoint when it is close to expiry. Both the popup and the in-page content
 // widget import this module, so the session is shared across surfaces via storage.
 
-// Public Firebase web API key — safe to ship in client code (it identifies the project,
-// it is not a secret). Matches apps/api project simply-def0f.
-const FIREBASE_API_KEY = 'AIzaSyD8fCQa0V3imk-ttnIlf1pIAit0IaBkSNc'
+// Public Firebase web API key. Safe to ship in client code (it identifies the project,
+// it is not a secret). Matches src/firebase.ts project simply-def0f-e4e3f.
+const FIREBASE_API_KEY = 'AIzaSyCyTAL65fgRCiXUHay-Crx4WzbfIYS36KI'
 
-// OAuth 2.0 Web client ID for project simply-def0f. Create one in Google Cloud Console
-// (APIs & Services → Credentials → Web application) and add the extension redirect URI
-// printed by chrome.identity.getRedirectURL() (https://<extension-id>.chromiumapp.org/)
-// as an authorized redirect URI. Sign-in will not work until this is filled in.
-const OAUTH_CLIENT_ID = '769969379454-7cgshr5lrsup3v3vt7lco68ft5t8cuev.apps.googleusercontent.com'
+// OAuth 2.0 Web client ID for project simply-def0f-e4e3f. After enabling Google sign-in in
+// Firebase Console, copy the "Web client" ID from GCP → APIs & Services → Credentials and
+// add your extension redirect URI (https://<extension-id>.chromiumapp.org/).
+const OAUTH_CLIENT_ID = '448198565907-0nokihgt4021fl9knk7qlq6v9k30lj7v.apps.googleusercontent.com'
 
-const STORAGE_KEY = 'simply-auth'
+export const AUTH_STORAGE_KEY = 'simply-auth'
+const STORAGE_KEY = AUTH_STORAGE_KEY
 export const LAST_ERROR_KEY = 'simply-last-error' // last sign-in error, shown by the popup
 const REFRESH_SKEW_MS = 60_000 // refresh a minute before the token actually expires
+
+export type SessionProfile = {
+  email?: string
+  displayName?: string
+  photoURL?: string
+  uid?: string
+}
 
 export class NotSignedInError extends Error {
   constructor() {
@@ -28,12 +35,21 @@ export class NotSignedInError extends Error {
   }
 }
 
-type Session = {
+type Session = SessionProfile & {
   idToken: string
   refreshToken: string
   expiresAt: number // epoch ms
-  email?: string
-  uid?: string
+}
+
+function decodeJwtPayload(token: string): Record<string, unknown> {
+  try {
+    const payload = token.split('.')[1]
+    if (!payload) return {}
+    const json = atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+    return JSON.parse(json) as Record<string, unknown>
+  } catch {
+    return {}
+  }
 }
 
 async function readSession(): Promise<Session | null> {
@@ -49,19 +65,35 @@ export async function signOut(): Promise<void> {
   await chrome.storage.local.remove(STORAGE_KEY)
 }
 
-export async function getSessionEmail(): Promise<string | null> {
-  return (await readSession())?.email ?? null
+// Returns stored profile fields. Prefer ensureValidSession() for UI — it confirms the token still works.
+export async function getSession(): Promise<SessionProfile | null> {
+  const session = await readSession()
+  if (!session) return null
+  return {
+    email: session.email,
+    displayName: session.displayName,
+    photoURL: session.photoURL,
+    uid: session.uid,
+  }
 }
 
-// Returns the stored session (or null). UI uses this so a signed-in state shows even if the
-// provider didn't return an email.
-export async function getSession(): Promise<{ email?: string } | null> {
-  return await readSession()
+/** Validates the cached session; clears storage and returns null when tokens are dead. */
+export async function ensureValidSession(): Promise<SessionProfile | null> {
+  try {
+    await getIdToken()
+    return await getSession()
+  } catch {
+    await signOut()
+    return null
+  }
 }
 
 // Interactive Google sign-in. Opens the Google account chooser, then exchanges the result
 // for a Firebase session. Resolves with the signed-in email.
 export async function signIn(): Promise<string | undefined> {
+  if (!OAUTH_CLIENT_ID) {
+    throw new Error('Extension OAuth client ID is not configured. See scripts/setup-firebase-auth.md.')
+  }
   const redirectUri = chrome.identity.getRedirectURL()
   const nonce = crypto.randomUUID()
   const authUrl =
@@ -85,18 +117,17 @@ export async function signIn(): Promise<string | undefined> {
     throw new Error('Google did not return an identity token.')
   }
 
-  const session = await exchangeGoogleToken(googleIdToken, redirectUri, nonce)
+  const googleClaims = decodeJwtPayload(googleIdToken)
+  const session = await exchangeGoogleToken(googleIdToken, redirectUri, nonce, googleClaims)
   await writeSession(session)
   return session.email
 }
 
-// Trades a Google OpenID id_token for a Firebase session (Identity Toolkit signInWithIdp).
-// The nonce must be forwarded: Google's implicit id_token carries the nonce we requested, and
-// signInWithIdp validates the token's nonce claim against it.
 async function exchangeGoogleToken(
   googleIdToken: string,
   requestUri: string,
   nonce: string,
+  googleClaims: Record<string, unknown>,
 ): Promise<Session> {
   const response = await fetch(
     `https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${FIREBASE_API_KEY}`,
@@ -118,6 +149,8 @@ async function exchangeGoogleToken(
     expiresIn?: string
     email?: string
     localId?: string
+    photoUrl?: string
+    displayName?: string
     error?: { message?: string }
   }
 
@@ -127,12 +160,18 @@ async function exchangeGoogleToken(
     throw new Error(`Firebase sign-in failed: ${detail}`)
   }
 
+  const claimPicture = typeof googleClaims.picture === 'string' ? googleClaims.picture : undefined
+  const claimName = typeof googleClaims.name === 'string' ? googleClaims.name : undefined
+  const claimEmail = typeof googleClaims.email === 'string' ? googleClaims.email : undefined
+
   return {
     idToken: data.idToken,
     refreshToken: data.refreshToken,
     expiresAt: Date.now() + Number(data.expiresIn) * 1000,
-    email: data.email,
+    email: data.email ?? claimEmail,
     uid: data.localId,
+    photoURL: data.photoUrl ?? claimPicture,
+    displayName: data.displayName ?? claimName,
   }
 }
 
@@ -145,7 +184,8 @@ async function refreshSession(session: Session): Promise<Session> {
   })
 
   if (!response.ok) {
-    throw new NotSignedInError() // refresh token revoked/expired — force re-login
+    await signOut()
+    throw new NotSignedInError() // refresh token revoked or expired. Force re-login.
   }
 
   const data = (await response.json()) as {

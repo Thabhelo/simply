@@ -1,57 +1,26 @@
 .page-shell {
-  background: linear-gradient(179deg, #edf0f5 -43%, #ffffff 90%);
-  color: #111;
+  background: var(--color-bg);
+  color: var(--color-ink);
   min-height: 100vh;
-  overflow: hidden;
   position: relative;
-}
-
-.ambient {
-  border-radius: 999px;
-  filter: blur(72px);
-  pointer-events: none;
-  position: absolute;
-  z-index: 0;
-}
-
-.ambient-one {
-  background: radial-gradient(closest-side, rgba(232, 100, 42, 0.18), rgba(255, 212, 180, 0.1), transparent);
-  height: 520px;
-  left: -120px;
-  top: 80px;
-  width: 520px;
-}
-
-.ambient-two {
-  background: radial-gradient(closest-side, rgba(110, 139, 255, 0.18), rgba(192, 132, 252, 0.12), transparent);
-  height: 560px;
-  right: -180px;
-  top: 280px;
-  width: 560px;
 }
 
 .glass-nav {
   align-items: center;
-  backdrop-filter: blur(22px) saturate(180%);
-  background: rgba(255, 255, 255, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.55);
-  border-radius: 48px;
-  box-shadow:
-    0 8px 32px rgba(31, 38, 135, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
   display: flex;
   gap: 16px;
-  left: 50%;
-  padding: 12px 14px;
+  left: 0;
+  padding: 14px 32px;
   position: fixed;
-  top: 24px;
-  transform: translateX(-50%);
-  width: min(980px, calc(100% - 48px));
+  right: 0;
+  top: 0;
   z-index: 20;
 }
 
 .brand {
-  color: #111;
+  color: var(--color-ink);
   font-family: 'Bricolage Grotesque', sans-serif;
   font-size: 22px;
   font-weight: 400;
@@ -91,26 +60,68 @@
 
 .nav-links a:hover,
 .nav-links .active {
-  background: rgba(0, 0, 0, 0.06);
-  color: #111;
+  background: var(--color-tint-peach);
+  color: var(--color-accent);
 }
 
 .nav-button {
-  background: #111;
+  background: var(--color-accent);
+  border-radius: 6px;
   color: #fff;
-  padding: 10px 18px;
+  padding: 9px 16px;
 }
 
 .nav-button:hover,
-.button:hover,
-.step-card:hover {
-  transform: translateY(-2px);
+.button.primary:hover,
+.early-card button:hover {
+  background: var(--color-accent-hover);
+}
+
+.auth-chip {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.auth-avatar {
+  align-items: center;
+  background: var(--color-link);
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  height: 34px;
+  justify-content: center;
+  overflow: hidden;
+  width: 34px;
+}
+
+.auth-avatar img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.auth-signout {
+  background: none;
+  border: 0;
+  color: rgba(0, 0, 0, 0.56);
+  cursor: pointer;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 13px;
+  padding: 0;
+}
+
+.auth-signin {
+  border: 0;
+  cursor: pointer;
 }
 
 .hero {
   margin: 0 auto;
   max-width: 1160px;
-  padding: 138px 40px 96px;
+  padding: 108px 40px 96px;
   position: relative;
   text-align: center;
   z-index: 1;
@@ -200,21 +211,15 @@
 
 .button.primary,
 .early-card button {
-  background: #111;
-  border: 1px solid #111;
+  background: var(--color-accent);
+  border: 0;
   color: #fff;
 }
 
 .button.secondary {
-  backdrop-filter: blur(16px);
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(0, 0, 0, 0.11);
-  color: #111;
-}
-
-.button.primary:hover,
-.early-card button:hover {
-  box-shadow: 0 18px 42px rgba(17, 17, 17, 0.18);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink);
 }
 
 .hero-product {
@@ -233,11 +238,9 @@
 .guide-card,
 .guide-preview,
 .early-card {
-  backdrop-filter: blur(40px);
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(0, 0, 0, 0.075);
-  border-radius: 24px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
 }
 
 .mock-window {
@@ -307,9 +310,9 @@
 }
 
 .status-pill {
-  border: 1px solid rgba(232, 100, 42, 0.28);
+  border: 1px solid var(--color-accent-soft);
   border-radius: 999px;
-  color: #c24a1a;
+  color: var(--color-accent);
   display: inline-flex;
   font-size: 12px;
   padding: 6px 10px;
@@ -325,10 +328,9 @@
 }
 
 .reader-output {
-  background: linear-gradient(150deg, rgba(253, 239, 228, 0.96), rgba(244, 239, 251, 0.9), rgba(231, 240, 250, 0.94));
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 22px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
+  background: var(--color-tint-peach);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
   margin-top: 14px;
   padding: 22px;
 }
@@ -391,9 +393,6 @@
 
 .soft-note {
   align-content: center;
-  background:
-    radial-gradient(circle at 72% 18%, rgba(232, 100, 42, 0.14), transparent 12rem),
-    rgba(255, 255, 255, 0.78);
   padding: 28px;
 }
 
@@ -444,39 +443,30 @@
 
 .step-card {
   padding: 24px;
-  transition:
-    box-shadow 250ms ease,
-    transform 250ms ease;
-}
-
-.step-card:hover {
-  box-shadow: 0 24px 56px rgba(15, 23, 42, 0.12);
 }
 
 .glyph {
   align-items: center;
-  border-radius: 18px;
+  background: var(--color-accent);
+  border-radius: 8px;
   color: #fff;
   display: inline-flex;
-  height: 52px;
+  height: 48px;
   justify-content: center;
-  margin-bottom: 28px;
-  width: 52px;
+  margin-bottom: 24px;
+  width: 48px;
 }
 
 .glyph-1 {
-  background: linear-gradient(140deg, #ffb37a, #e8642a);
-  box-shadow: 0 14px 26px rgba(194, 74, 26, 0.2);
+  background: var(--color-accent);
 }
 
 .glyph-2 {
-  background: linear-gradient(140deg, #9db4ff, #6e8bff);
-  box-shadow: 0 14px 26px rgba(110, 139, 255, 0.2);
+  background: var(--color-link);
 }
 
 .glyph-3 {
-  background: linear-gradient(140deg, #c084fc, #9333ea);
-  box-shadow: 0 14px 26px rgba(147, 51, 234, 0.18);
+  background: #6a8f6a;
 }
 
 .step-card h3 {
@@ -487,9 +477,7 @@
 
 .guide-card {
   align-items: center;
-  background:
-    linear-gradient(150deg, rgba(253, 239, 228, 0.84), rgba(244, 239, 251, 0.76) 60%, rgba(231, 240, 250, 0.84)),
-    rgba(255, 255, 255, 0.78);
+  background: #ffffff;
   display: grid;
   gap: 44px;
   grid-template-columns: minmax(0, 0.95fr) minmax(320px, 1.05fr);
@@ -520,7 +508,7 @@
 }
 
 .guide-title-row svg {
-  color: #e8642a;
+  color: var(--color-accent);
 }
 
 .guide-title-row strong {
@@ -530,8 +518,8 @@
 }
 
 .guide-row {
-  background: rgba(0, 0, 0, 0.03);
-  border-radius: 18px;
+  background: var(--color-tint-sky);
+  border-radius: 8px;
   margin-top: 12px;
   padding: 16px;
 }
@@ -546,10 +534,7 @@
 }
 
 .early-card {
-  background:
-    radial-gradient(circle at 28% 0%, rgba(232, 100, 42, 0.16), transparent 20rem),
-    radial-gradient(circle at 80% 25%, rgba(110, 139, 255, 0.16), transparent 20rem),
-    rgba(255, 255, 255, 0.86);
+  background: #ffffff;
   margin: 0 auto;
   max-width: 760px;
   padding: 44px;
@@ -624,9 +609,8 @@
 
 @media (max-width: 900px) {
   .glass-nav {
-    align-items: stretch;
     flex-wrap: wrap;
-    width: min(680px, calc(100% - 32px));
+    padding: 12px 20px;
   }
 
   .nav-links {
@@ -658,7 +642,7 @@
 
 @media (max-width: 560px) {
   .glass-nav {
-    top: 12px;
+    top: 0;
   }
 
   .brand {
@@ -701,4 +685,36 @@
     padding-left: 16px;
     padding-right: 16px;
   }
+}
+
+.site-footer {
+  align-items: center;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding: 28px 32px 40px;
+}
+
+.site-footer p {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.site-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.site-footer-links a {
+  color: var(--color-muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.site-footer-links a:hover {
+  color: var(--color-ink);
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectBasic, projectConcepts, lessonsFromBasic, lessonFromPrereq, nextSteps, buildDetectInput, cacheKey, filterBuildsOn, cleanDiagram } from './analysis.js'
+import { detectBasic, projectConcepts, lessonsFromBasic, lessonFromPrereq, buildDetectInput, cacheKey, filterBuildsOn, cleanDiagram, isSparseLesson } from './analysis.js'
 
 describe('detectBasic', () => {
   it('matches concepts present in the text', () => {
@@ -74,6 +74,29 @@ describe('filterBuildsOn', () => {
       { area: 'Calculus', concept: 'Gradient', evidenceQuote: '', whyAssumed: '', buildsOn: ['Vectors', 'Ghost concept', 'Gradient'] },
     ])
     expect(out[1].buildsOn).toEqual(['Vectors'])
+  })
+})
+
+describe('isSparseLesson', () => {
+  it('flags lessons missing required depth', () => {
+    expect(
+      isSparseLesson({
+        hook: 'You cannot read the attention equation without matrix multiplication.',
+        definition: 'A long enough definition that explains the term clearly.',
+        intuition: 'Enough intuition text here to pass the minimum length check easily.',
+        example: '1. **Input:** Query matrix Q with shape (1×d)\n2. **Step:** Compute scores as QK^T\n3. **Output:** Weighted value sum after softmax',
+        inThisPaper: 'The paper uses this in section 3.',
+      }),
+    ).toBe(false)
+    expect(
+      isSparseLesson({
+        hook: '',
+        definition: 'tiny',
+        intuition: 'The core attention mechanism uses matrix multiplication.',
+        example: '',
+        inThisPaper: 'Attention formula only.',
+      }),
+    ).toBe(true)
   })
 })
 

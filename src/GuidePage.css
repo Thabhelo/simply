@@ -1,219 +1,334 @@
-/* TEMPORARY dev viewer styling — Simply tokens, minimal. Thabhelo's /guide replaces this.
-   Palette is driven by CSS variables on :root[data-theme] so the light/dark toggle only
-   recolors this viewer (the landing App doesn't use these vars). */
-
-:root[data-theme='light'] {
-  --bg: #f7f3ea;
-  --surface: #ffffff;
-  --text: #101827;
-  --muted: #667085;
-  --border: rgba(16, 24, 39, 0.1);
-  --accent: #5b4bff;
-  --accent-2: #c24a1a;
-  --block-bg: rgba(91, 75, 255, 0.05);
-}
-
+:root[data-theme='light'],
 :root[data-theme='dark'] {
-  --bg: #0e1116;
-  --surface: #171b22;
-  --text: #e6e8eb;
-  --muted: #9aa3af;
-  --border: rgba(255, 255, 255, 0.08);
-  --accent: #8b7bff;
-  --accent-2: #e8915f;
-  --block-bg: rgba(139, 123, 255, 0.08);
+  --bg: var(--color-bg);
+  --surface: var(--color-surface);
+  --text: var(--color-ink);
+  --muted: var(--color-muted);
+  --border: var(--color-border);
+  --accent: var(--color-accent);
+  --link: var(--color-link);
+  --page-width: min(1280px, 94vw);
 }
 
-/* Paint the page background edge-to-edge so no light gutter flashes in dark mode. */
-:root[data-theme='light'] body,
-:root[data-theme='dark'] body {
+.guide-page {
   background: var(--bg);
-}
-
-.guide-shell {
-  background: var(--bg);
-  box-sizing: border-box;
   color: var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  margin: 0 auto;
-  max-width: 720px;
+  font-family: 'Inter Tight', Inter, ui-sans-serif, system-ui, sans-serif;
   min-height: 100vh;
-  padding: 0 24px 112px;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .guide-shell,
-  .guide-lesson,
-  .guide-block,
-  .guide-badge,
-  .guide-toggle {
-    transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
-  }
-}
-
-.guide-status {
-  color: var(--muted);
-  font-size: 15px;
-  padding-top: 96px;
-  text-align: center;
-}
-
-/* Slim sticky header keeps the theme toggle reachable while reading. */
-.guide-head {
-  align-items: center;
-  background: var(--bg);
+.guide-nav {
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  margin: 0 -24px 36px;
-  padding: 14px 24px;
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
 }
 
-.guide-head-end {
+.guide-nav-inner {
+  align-items: center;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: auto 1fr auto;
+  margin: 0 auto;
+  max-width: var(--page-width);
+  padding: 14px 32px;
+}
+
+.guide-nav-links {
+  display: flex;
+  justify-content: center;
+}
+
+.guide-nav-link {
+  color: var(--link);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.guide-nav-link:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.guide-nav-actions {
   align-items: center;
   display: flex;
-  gap: 10px;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 .guide-brand {
   color: var(--text);
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.04em;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.06em;
   text-decoration: none;
 }
 
-.guide-badge {
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  padding: 5px 10px;
-  text-transform: uppercase;
-}
-
-.guide-badge.ai {
-  background: var(--block-bg);
-  color: var(--accent);
-}
-
-.guide-badge.basic {
-  border: 1px solid var(--accent-2);
-  color: var(--accent-2);
-}
-
+.guide-pdf-nav,
 .guide-toggle {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 6px;
   color: var(--text);
   cursor: pointer;
   font: inherit;
   font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-  padding: 7px 13px;
+  padding: 7px 12px;
 }
 
+.guide-pdf-nav:hover,
 .guide-toggle:hover {
   border-color: var(--accent);
+  color: var(--accent);
+}
+
+.guide-pdf-nav:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.guide-status {
+  color: var(--muted);
+  font-size: 16px;
+  margin: 0 auto;
+  max-width: var(--page-width);
+  padding: 140px 32px;
+  text-align: center;
+}
+
+.guide-body {
+  margin: 0 auto;
+  max-width: var(--page-width);
+  padding: 40px 32px 80px;
+}
+
+.guide-hero {
+  margin-bottom: 28px;
+}
+
+.guide-kicker {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin: 0 0 12px;
+  text-transform: uppercase;
 }
 
 .guide-title {
-  font-size: 34px;
-  letter-spacing: -0.025em;
+  color: var(--text);
+  font-family: 'Geist', 'Inter Tight', sans-serif;
+  font-size: clamp(32px, 4.5vw, 48px);
+  font-weight: 400;
+  letter-spacing: -0.03em;
   line-height: 1.15;
-  margin: 0 0 18px;
+  margin: 0 0 20px;
 }
 
-.guide-overview {
+.guide-overview-card {
+  background: var(--color-tint-peach);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 20px;
+  padding: 24px 28px;
+}
+
+.guide-overview-card .rich-prose {
   color: var(--text);
-  font-size: 19px;
-  line-height: 1.65;
-  margin: 0 0 48px;
-  max-width: 68ch;
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.guide-source {
+  color: var(--link);
+  display: inline-block;
+  font-size: 14px;
+  margin-bottom: 8px;
+  text-decoration: none;
+}
+
+.guide-source:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.guide-toc {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 24px;
+  padding: 18px 20px;
+}
+
+.guide-toc-title {
+  color: var(--text);
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin: 0 0 16px;
+}
+
+.guide-toc-list {
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.guide-toc-list a {
+  align-items: baseline;
+  border-radius: 6px;
+  color: var(--text);
+  display: flex;
+  gap: 12px;
+  padding: 8px 10px;
+  text-decoration: none;
+}
+
+.guide-toc-list a:hover {
+  background: var(--color-tint-peach);
+}
+
+.guide-toc-num {
+  color: var(--accent);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 24px;
+}
+
+.guide-toc-label {
+  font-size: 15px;
+  line-height: 1.45;
 }
 
 .guide-lessons {
   display: grid;
-  gap: 26px;
+  gap: 24px;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
 .guide-lesson {
-  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 18px;
-  padding: 26px 28px;
+  border-radius: 8px;
+  padding: 22px 26px;
+  scroll-margin-top: 72px;
+}
+
+.guide-lesson.tone-peach {
+  background: var(--color-tint-peach);
+}
+
+.guide-lesson.tone-sky {
+  background: var(--color-tint-sky);
+}
+
+.guide-lesson.tone-sage {
+  background: var(--color-tint-sage);
+}
+
+.guide-lesson.tone-lilac {
+  background: var(--color-tint-lilac);
+}
+
+.guide-lesson.tone-sand {
+  background: var(--color-tint-sand);
+}
+
+.guide-lesson-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.guide-lesson-num {
+  color: var(--accent);
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 1;
 }
 
 .guide-area {
-  color: var(--accent);
+  color: var(--link);
   display: block;
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   margin-bottom: 8px;
   text-transform: uppercase;
 }
 
 .guide-lesson-title {
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -0.015em;
-  line-height: 1.3;
-  margin: 0 0 14px;
-}
-
-.guide-hook {
   color: var(--text);
-  font-size: 17px;
-  font-style: italic;
-  line-height: 1.6;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.guide-hook-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+}
+
+.guide-illustration {
   margin: 0 0 14px;
-  max-width: 68ch;
 }
 
-.guide-block {
-  background: var(--block-bg);
-  border-radius: 12px;
-  margin: 16px 0;
-  padding: 16px 18px;
+.guide-illustration img {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: block;
+  height: auto;
+  width: 100%;
 }
 
-.guide-label {
+.guide-lesson-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.guide-incomplete-note {
+  background: var(--surface);
+  border: 1px solid var(--color-accent-soft);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+}
+
+.guide-section-label {
   color: var(--accent);
-  display: inline-block;
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  margin-bottom: 4px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  margin: 0 0 6px;
   text-transform: uppercase;
 }
 
-.guide-block p,
-.guide-intuition,
-.guide-inpaper {
-  color: var(--text);
-  font-size: 16px;
-  line-height: 1.7;
-  margin: 4px 0 0;
-  max-width: 68ch;
-}
-
-.guide-intuition {
-  margin: 16px 0 0;
-}
-
-.guide-inpaper {
-  color: var(--muted);
-  margin-top: 16px;
+.guide-example-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
 }
 
 .guide-builds {
@@ -223,11 +338,266 @@
 }
 
 .guide-diagram {
-  margin: 18px 0 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
   overflow-x: auto;
+  padding: 16px;
 }
 
 .guide-diagram svg {
   height: auto;
   max-width: 100%;
+}
+
+.rich-prose {
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.75;
+}
+
+.rich-prose .rich-p {
+  margin: 0 0 10px;
+}
+
+.rich-prose .rich-p:last-child {
+  margin-bottom: 0;
+}
+
+.rich-prose .rich-strong {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.rich-prose .rich-ol,
+.rich-prose .rich-ul {
+  margin: 12px 0 0;
+  padding-left: 1.35rem;
+}
+
+.rich-prose .rich-li {
+  margin: 10px 0;
+}
+
+.rich-prose .rich-li .rich-p {
+  margin: 0;
+}
+
+.rich-prose .katex-display {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 8px 0;
+  overflow-x: auto;
+  padding: 10px 12px;
+}
+
+.rich-prose .rich-inline-code {
+  background: var(--color-tint-sky);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--link);
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+}
+
+.highlight-ask {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-width: 360px;
+  padding: 14px 16px;
+  position: fixed;
+  transform: translate(-50%, -100%);
+  z-index: 30;
+}
+
+.highlight-ask-close {
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  float: right;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+}
+
+.highlight-ask-quote {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0 0 10px;
+}
+
+.highlight-ask-signin {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
+.highlight-ask-row {
+  display: flex;
+  gap: 8px;
+}
+
+.highlight-ask-row input {
+  background: var(--color-tint-sand);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.highlight-ask-row button {
+  background: var(--accent);
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+}
+
+.highlight-ask-row button:hover {
+  background: var(--color-accent-hover);
+}
+
+.highlight-ask-answer {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 0;
+}
+
+/*
+ * Print pagination is controlled at the *atomic block* level, never the whole
+ * lesson — a lesson is taller than a page, so break-inside: avoid on it can't be
+ * honored and just leaves blank gaps. Keep indivisible blocks together instead.
+ */
+.guide-print-mode .guide-overview-card,
+.guide-print-mode .guide-hook-card,
+.guide-print-mode .guide-illustration,
+.guide-print-mode .guide-example-card,
+.guide-print-mode .visual-steps-static-item,
+.guide-print-mode .guide-sketch {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+@media print {
+  @page {
+    margin: 18mm 16mm;
+  }
+
+  body {
+    background: #fffaf5;
+  }
+
+  .guide-nav,
+  .highlight-ask,
+  .visual-steps-toggle,
+  .visual-steps-progress,
+  .guide-incomplete-note {
+    display: none !important;
+  }
+
+  .guide-page {
+    background: #fffaf5;
+    min-height: auto;
+  }
+
+  .guide-body {
+    /*
+     * @page handles the real page margins. This internal padding is a fallback
+     * so content never runs flush to the paper edge if the print dialog margin
+     * is set to "None"/"Minimum" (which strips @page margins).
+     */
+    margin: 0 auto;
+    max-width: 170mm;
+    padding: 0 8mm;
+  }
+
+  .guide-lesson {
+    scroll-margin-top: 0;
+  }
+
+  /* Keep indivisible blocks whole; never span a page boundary. */
+  .guide-overview-card,
+  .guide-hook-card,
+  .guide-illustration,
+  .guide-example-card,
+  .visual-steps-static-item,
+  .guide-sketch {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .guide-sketch {
+    height: auto;
+    min-height: 280px;
+  }
+
+  /* Cap illustrations so they always fit on one page and never split. */
+  .guide-illustration img {
+    max-height: 88vh;
+    object-fit: contain;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Never strand a heading at the bottom of a page, away from its content. */
+  .guide-lesson-title,
+  .guide-section-label,
+  .visual-steps-label {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* No single dangling line of prose across a page boundary. */
+  .rich-prose p,
+  .rich-p,
+  .guide-section p {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .guide-page,
+  .guide-body,
+  .guide-lesson,
+  .guide-overview-card,
+  .guide-hook-card,
+  .guide-example-card,
+  .guide-toc,
+  .visual-steps,
+  .guide-illustration img {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .guide-toc-list a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .guide-source::after {
+    content: ' (' attr(href) ')';
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 720px) {
+  .guide-nav-inner,
+  .guide-body {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  .guide-lesson {
+    padding: 22px 20px;
+  }
 }

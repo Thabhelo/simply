@@ -1,0 +1,35 @@
+.simply-shell {
+  background: var(--color-bg);
+  min-height: 100vh;
+  padding: 16px;
+}
+
+.simply-popup-card {
+  margin-top: 4px;
+}
+
+.result-head h2 {
+  color: var(--color-ink);
+  font-family: 'Bricolage Grotesque', Inter, sans-serif;
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin: 14px 0 0;
+}
+
+.lessons {
+  margin-top: 8px;
+}
+
+#signout {
+  background: none;
+  border: 0;
+  cursor: pointer;
+  min-height: auto;
+  padding: 0;
+  width: auto;
+}
+
+#signout:hover {
+  background: none;
+}

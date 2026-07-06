@@ -1,0 +1,264 @@
+/* Simply shared UI — same tokens and components as the landing page. Solid colors only. */
+
+:root {
+  --color-bg: #f3ebe3;
+  --color-surface: #fffaf5;
+  --color-ink: #3d2e24;
+  --color-muted: #7a6b5c;
+  --color-border: #dccfc2;
+  --color-accent: #c4511d;
+  --color-accent-hover: #a84316;
+  --color-accent-soft: #e8a882;
+  --color-link: #3d6a8c;
+  --color-tint-peach: #faefe4;
+  --color-tint-sky: #e8f0f6;
+  --color-tint-sage: #e9f0e9;
+  --color-tint-sand: #f7f0e6;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: 'Inter Tight', Inter, ui-sans-serif, system-ui, sans-serif;
+  margin: 0;
+}
+
+.brand {
+  color: var(--color-ink);
+  font-family: 'Bricolage Grotesque', Inter, sans-serif;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  margin: 0;
+  text-decoration: none;
+}
+
+.tiny-pill {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  color: var(--color-muted);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  margin: 0;
+  padding: 8px 14px;
+}
+
+.status-pill {
+  border: 1px solid var(--color-accent-soft);
+  border-radius: 999px;
+  color: var(--color-accent);
+  display: inline-flex;
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.micro-label {
+  color: var(--color-muted);
+  font-size: 12px;
+  margin: 0;
+}
+
+.simply-copy {
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.65;
+  margin: 10px 0 0;
+}
+
+.simply-title {
+  color: var(--color-ink);
+  font-family: 'Bricolage Grotesque', Inter, sans-serif;
+  font-size: 22px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  margin: 12px 0 0;
+}
+
+.button,
+.nav-button {
+  align-items: center;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  font-family: 'Bricolage Grotesque', Inter, sans-serif;
+  font-size: 15px;
+  font-weight: 500;
+  gap: 8px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 11px 22px;
+  text-decoration: none;
+  transition: background 200ms ease;
+  width: 100%;
+}
+
+.button.primary,
+.nav-button {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.button.primary:hover,
+.nav-button:hover {
+  background: var(--color-accent-hover);
+}
+
+.button.secondary {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-ink);
+  width: auto;
+}
+
+.button:disabled,
+.nav-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.mock-window,
+.simply-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 18px;
+}
+
+.window-bar {
+  align-items: center;
+  display: flex;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.window-bar span {
+  border-radius: 999px;
+  height: 10px;
+  width: 10px;
+}
+
+.window-bar span:nth-child(1) {
+  background: #ff7e96;
+}
+
+.window-bar span:nth-child(2) {
+  background: #ffb37a;
+}
+
+.window-bar span:nth-child(3) {
+  background: #34d17a;
+}
+
+.guide-row {
+  background: var(--color-tint-sky);
+  border-radius: 8px;
+  margin-top: 10px;
+  padding: 14px;
+}
+
+.guide-row span {
+  color: var(--color-muted);
+  display: block;
+  font-size: 12px;
+}
+
+.guide-row h3 {
+  color: var(--color-ink);
+  font-family: 'Bricolage Grotesque', Inter, sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  margin: 6px 0 0;
+}
+
+.guide-row p {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 6px 0 0;
+}
+
+.simply-head {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.auth-chip {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.auth-avatar,
+.avatar {
+  align-items: center;
+  background: var(--color-link);
+  border: 0;
+  border-radius: 999px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 600;
+  height: 32px;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0;
+  width: 32px;
+}
+
+.auth-avatar img,
+.avatar img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.auth-signout {
+  background: none;
+  border: 0;
+  color: var(--color-muted);
+  cursor: pointer;
+  font-family: 'Bricolage Grotesque', Inter, sans-serif;
+  font-size: 13px;
+  padding: 0;
+}
+
+#signin {
+  background: var(--color-accent);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  min-height: auto;
+  padding: 7px 14px;
+  width: auto;
+}
+
+.simply-status {
+  color: var(--color-muted);
+  font-size: 13px;
+  margin-top: 12px;
+  min-height: 18px;
+}
+
+.simply-actions {
+  margin-top: 16px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}

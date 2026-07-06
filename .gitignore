@@ -29,4 +29,6 @@ serviceAccountKey.json
 *.njsproj
 *.sln
 *.sw?
+.firebase
 .vercel
+

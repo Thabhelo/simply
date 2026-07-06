@@ -10,7 +10,12 @@ import {
   MessageCircle,
   Search,
 } from 'lucide-react'
+import AuthButton from './AuthButton'
 import './App.css'
+
+const CHROME_STORE_URL =
+  import.meta.env.VITE_CHROME_STORE_URL ??
+  'https://chromewebstore.google.com/detail/simply-prerequisite-guides/simply'
 
 const ease = [0.22, 1, 0.36, 1] as const
 const headline = ['Read', 'hard', 'papers', 'with', 'a', 'calmer', 'mind.']
@@ -59,9 +64,6 @@ const paperTerms = ['Bayesian neural nets', 'Dropout', 'KL divergence', 'Gradien
 function App() {
   return (
     <main className="page-shell">
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
-
       <nav className="glass-nav" aria-label="Main navigation">
         <a className="brand" href="/" aria-label="Simply home">
           simply
@@ -70,20 +72,18 @@ function App() {
           <a className="active" href="#reader">
             Reader
           </a>
+          <a href="/library">Your papers</a>
           <a href="#guide">Guide</a>
           <a href="#early">Early access</a>
         </div>
-        <a className="nav-button" href="#early">
-          Join
-          <ArrowUpRight size={14} />
-        </a>
+        <AuthButton />
       </nav>
 
       <section className="hero">
         <motion.p
           className="tiny-pill"
-          initial={{ opacity: 0, y: 14, filter: 'blur(10px)' }}
-          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease }}
         >
           A gentle reader for research papers
@@ -93,8 +93,8 @@ function App() {
           {headline.map((word, index) => (
             <motion.span
               key={word}
-              initial={{ opacity: 0, y: 20, filter: 'blur(12px)' }}
-              animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.72, delay: index * 0.052, ease }}
             >
               {word}
@@ -104,8 +104,8 @@ function App() {
 
         <motion.p
           className="hero-copy"
-          initial={{ opacity: 0, y: 18, filter: 'blur(10px)' }}
-          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.32, ease }}
         >
           <span className="brand-word">
@@ -126,9 +126,9 @@ function App() {
             Get early access
             <ArrowUpRight size={15} />
           </a>
-          <a className="button secondary" href="/simply-chrome-extension.zip" download>
-            Download Chrome extension
-            <Download size={15} />
+          <a className="button secondary" href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">
+            Get the Chrome extension
+            <ArrowUpRight size={15} />
           </a>
           <a className="button secondary" href="https://arxiv.org/pdf/1606.08415v3" target="_blank">
             Try the demo paper
@@ -137,8 +137,8 @@ function App() {
 
         <motion.div
           className="hero-product"
-          initial={{ opacity: 0, y: 28, filter: 'blur(12px)' }}
-          animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.52, ease }}
         >
           <MockReaderPanel />
@@ -170,8 +170,8 @@ function App() {
               <motion.article
                 className="step-card"
                 key={step.title}
-                initial={{ opacity: 0, y: 28, filter: 'blur(10px)' }}
-                whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: '-120px' }}
                 transition={{ duration: 0.65, delay: index * 0.08, ease }}
               >
@@ -248,12 +248,21 @@ function App() {
               <Check size={15} />
             </button>
           </form>
-          <a className="button secondary download-link" href="/simply-chrome-extension.zip" download>
-            Download Chrome extension
-            <Download size={15} />
+          <a className="button secondary download-link" href={CHROME_STORE_URL} target="_blank" rel="noopener noreferrer">
+            Get the Chrome extension
+            <ArrowUpRight size={15} />
           </a>
         </div>
       </section>
+
+      <footer className="site-footer">
+        <p>© {new Date().getFullYear()} Simply</p>
+        <div className="site-footer-links">
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href="/security">Security</a>
+        </div>
+      </footer>
     </main>
   )
 }

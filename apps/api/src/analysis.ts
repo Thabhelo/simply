@@ -86,6 +86,29 @@ export function cleanDiagram(d?: string): string | undefined {
   return /^(flowchart|graph)\b/.test(t) ? t : undefined
 }
 
+const MIN_HOOK = 12
+const MIN_DEFINITION = 40
+const MIN_INTUITION = 50
+const MIN_EXAMPLE = 60
+const MIN_IN_PAPER = 20
+
+export function isSparseLesson(lesson: {
+  hook?: string
+  definition?: string
+  intuition?: string
+  example?: string
+  inThisPaper?: string
+}): boolean {
+  const len = (s?: string) => (s ?? '').trim().length
+  return (
+    len(lesson.hook) < MIN_HOOK ||
+    len(lesson.definition) < MIN_DEFINITION ||
+    len(lesson.intuition) < MIN_INTUITION ||
+    len(lesson.example) < MIN_EXAMPLE ||
+    len(lesson.inThisPaper) < MIN_IN_PAPER
+  )
+}
+
 export function lessonFromPrereq(p: Prerequisite): Lesson {
   return {
     area: p.area, concept: p.concept, title: p.concept,

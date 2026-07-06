@@ -19,12 +19,12 @@ import { initializeApp } from 'firebase/app'
 import { getAuth, GoogleAuthProvider } from 'firebase/auth'
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyD8fCQa0V3imk-ttnIlf1pIAit0IaBkSNc',
-  authDomain: 'simply-def0f.firebaseapp.com',
-  projectId: 'simply-def0f',
-  storageBucket: 'simply-def0f.firebasestorage.app',
-  messagingSenderId: '769969379454',
-  appId: '1:769969379454:web:0af599bafbbc9db36ee02f',
+  apiKey: 'AIzaSyCyTAL65fgRCiXUHay-Crx4WzbfIYS36KI',
+  authDomain: 'simply-def0f-e4e3f.firebaseapp.com',
+  projectId: 'simply-def0f-e4e3f',
+  storageBucket: 'simply-def0f-e4e3f.firebasestorage.app',
+  messagingSenderId: '448198565907',
+  appId: '1:448198565907:web:0f4b219d289c283afadfe6',
 }
 
 export const app = initializeApp(firebaseConfig)

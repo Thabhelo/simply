@@ -1,4 +1,10 @@
 import { authedFetch, NotSignedInError } from './auth.js'
+import { apiBase, webBase } from './config.js'
+import simplyUiCss from '../../../shared/simply-ui.css?inline'
+import contentWidgetCss from '../../../shared/simply-content-widget.css?inline'
+
+const FONT_LINK =
+  'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap'
 
 type PaperPayload = {
   title: string
@@ -34,10 +40,8 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 }
-
-const apiBase = 'http://localhost:8787'
-const webBase = 'http://localhost:5173' // dev frontend; hardcoded for now (configurable for prod — see deploy notes)
 const widgetId = 'simply-research-widget'
+const collapsedKey = 'simply-widget-collapsed'
 
 function getMeta(name: string) {
   return document.querySelector<HTMLMetaElement>(
@@ -107,8 +111,27 @@ function getPaperText(): PaperPayload {
 function renderLessonTeaser(lessons: AnalysisResponse['lessons']) {
   return (lessons ?? [])
     .slice(0, 3)
-    .map((l) => `<li><span>${escapeHtml(l.area)}</span><strong>${escapeHtml(l.title)}</strong></li>`)
+    .map(
+      (l, i) =>
+        `<article class="guide-row">
+          <span>Topic ${String(i + 1).padStart(2, '0')}</span>
+          <h3>${escapeHtml(l.title)}</h3>
+          <p>${escapeHtml(l.hook || l.intuition)}</p>
+        </article>`,
+    )
     .join('')
+}
+
+function signInViaBackground(): Promise<{ ok: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'SIMPLY_SIGN_IN' }, (response) => {
+      if (chrome.runtime.lastError) {
+        resolve({ ok: false, error: 'Sign-in interrupted.' })
+        return
+      }
+      resolve(response ?? { ok: false, error: 'Sign-in failed.' })
+    })
+  })
 }
 
 function mountWidget() {
@@ -119,179 +142,67 @@ function mountWidget() {
   const host = document.createElement('div')
   host.id = widgetId
   const shadow = host.attachShadow({ mode: 'open' })
+  let collapsed = sessionStorage.getItem(collapsedKey) === '1'
+  let lastGuideId: string | null = null
 
   shadow.innerHTML = `
+    <link rel="stylesheet" href="${FONT_LINK}" />
     <style>
       :host {
         all: initial;
         color-scheme: light;
-        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
 
-      .panel {
-        animation: slide-in 420ms cubic-bezier(0.22, 1, 0.36, 1);
-        background: rgba(255, 255, 255, 0.88);
-        backdrop-filter: blur(22px) saturate(180%);
-        border: 1px solid rgba(0, 0, 0, 0.08);
-        border-radius: 22px;
-        box-shadow: 0 24px 64px rgba(15, 23, 42, 0.14);
-        box-sizing: border-box;
-        color: #111;
-        padding: 16px;
-        position: fixed;
-        right: 24px;
-        top: 24px;
-        width: 320px;
-        max-height: min(72vh, 600px);
-        overflow-y: auto;
-        z-index: 2147483647;
-      }
-
-      .top {
-        align-items: center;
-        display: flex;
-        justify-content: space-between;
-        gap: 12px;
-      }
-
-      .brand {
-        font-size: 13px;
-        font-weight: 650;
-        letter-spacing: -0.02em;
-      }
-
-      .pill {
-        border: 1px solid rgba(232, 100, 42, 0.28);
-        border-radius: 999px;
-        color: #c24a1a;
-        font-size: 11px;
-        padding: 5px 8px;
-      }
-
-      h3 {
-        font-size: 18px;
-        font-weight: 520;
-        letter-spacing: -0.03em;
-        line-height: 1.12;
-        margin: 14px 0 8px;
-      }
-
-      p, .status {
-        color: rgba(0, 0, 0, 0.62);
-        font-size: 14px;
-        line-height: 1.5;
-        margin: 0;
-      }
-
-      .actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 14px;
-      }
-
-      .open {
-        margin-top: 12px;
-        width: 100%;
-      }
-
-      button {
-        border: 0;
-        border-radius: 999px;
-        cursor: pointer;
-        font: inherit;
-        font-size: 13px;
-        min-height: 36px;
-        padding: 0 13px;
-      }
-
-      .primary {
-        background: #111;
-        color: #fff;
-      }
-
-      .secondary {
-        background: rgba(0, 0, 0, 0.05);
-        color: rgba(0, 0, 0, 0.68);
-      }
-
-      ul {
-        display: grid;
-        gap: 8px;
-        list-style: none;
-        margin: 14px 0 0;
-        padding: 0;
-      }
-
-      li {
-        background: rgba(0, 0, 0, 0.035);
-        border-radius: 12px;
-        color: #111;
-        padding: 10px 12px;
-      }
-
-      li span {
-        color: #5b4bff;
-        display: block;
-        font-size: 11px;
-        font-weight: 700;
-        letter-spacing: 0.12em;
-        margin-bottom: 4px;
-        text-transform: uppercase;
-      }
-
-      li strong {
-        display: block;
-        font-size: 14px;
-        font-weight: 600;
-      }
-
-      @keyframes slide-in {
-        from {
-          opacity: 0;
-          transform: translateY(-12px) translateX(18px);
-        }
-
-        to {
-          opacity: 1;
-          transform: translateY(0) translateX(0);
-        }
-      }
+      ${simplyUiCss}
+      ${contentWidgetCss}
     </style>
-    <section class="panel" aria-label="Simply research paper helper">
-      <div class="top">
-        <span class="brand">Simply</span>
-        <span class="pill">Paper detected</span>
+    <button class="simply-tab hidden" id="simply-tab" type="button" aria-label="Open Simply">simply</button>
+    <section class="simply-panel" aria-label="Simply">
+      <div class="simply-panel-head">
+        <span class="brand">simply</span>
+        <button class="simply-close" id="simply-close" type="button" aria-label="Close">×</button>
       </div>
-      <h3>This looks like a research paper.</h3>
-      <p>Simply can build a calm prerequisite canvas for the page you are reading.</p>
-      <div class="actions">
-        <button class="primary" id="simply-analyze" type="button">Analyze</button>
-        <button class="secondary" id="simply-dismiss" type="button">Dismiss</button>
+      <div class="window-bar" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
-      <div class="status" id="simply-status"></div>
-      <ul id="simply-results"></ul>
-      <button class="primary open" id="simply-open" type="button" hidden>Open full guide ↗</button>
+      <span class="tiny-pill">Prerequisite guide</span>
+      <h2 class="simply-title">Build a calm reading guide for this paper.</h2>
+      <p class="simply-copy">Simply reads what you have open and maps the background you need for a first pass.</p>
+      <div class="simply-actions">
+        <button class="button primary" id="simply-analyze" type="button">Analyze</button>
+      </div>
+      <p class="simply-status" id="simply-status" role="status"></p>
+      <div class="simply-results" id="simply-results"></div>
+      <button class="button primary simply-open-btn" id="simply-open" type="button" hidden>Reopen guide</button>
     </section>
   `
 
   document.documentElement.append(host)
 
+  const panel = shadow.querySelector<HTMLElement>('.simply-panel')
+  const tab = shadow.querySelector<HTMLButtonElement>('#simply-tab')
+  const closeButton = shadow.querySelector<HTMLButtonElement>('#simply-close')
   const analyzeButton = shadow.querySelector<HTMLButtonElement>('#simply-analyze')
-  const dismissButton = shadow.querySelector<HTMLButtonElement>('#simply-dismiss')
   const openButton = shadow.querySelector<HTMLButtonElement>('#simply-open')
   const statusEl = shadow.querySelector<HTMLElement>('#simply-status')
   const resultsEl = shadow.querySelector<HTMLElement>('#simply-results')
 
-  let lastPayload: PaperPayload | null = null
-  let lastGuideId: string | null = null
+  function setCollapsed(next: boolean) {
+    collapsed = next
+    sessionStorage.setItem(collapsedKey, collapsed ? '1' : '0')
+    panel?.classList.toggle('hidden', collapsed)
+    tab?.classList.toggle('hidden', !collapsed)
+  }
 
-  dismissButton?.addEventListener('click', () => host.remove())
+  setCollapsed(collapsed)
 
-  analyzeButton?.addEventListener('click', async () => {
-    if (!statusEl || !resultsEl || !analyzeButton || !openButton) {
-      return
-    }
+  tab?.addEventListener('click', () => setCollapsed(false))
+  closeButton?.addEventListener('click', () => setCollapsed(true))
+
+  async function runAnalyze() {
+    if (!statusEl || !resultsEl || !analyzeButton || !openButton) return
 
     analyzeButton.disabled = true
     openButton.hidden = true
@@ -300,7 +211,6 @@ function mountWidget() {
 
     try {
       const payload = getPaperText()
-      lastPayload = payload
       const response = await authedFetch(`${apiBase}/api/analyze`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -315,32 +225,33 @@ function mountWidget() {
       lastGuideId = analysis.id ?? null
       const count = (analysis.lessons ?? []).length
       statusEl.textContent = count
-        ? `Found ${count} prerequisite ideas. Open the full guide for the lessons.`
+        ? `${count} topics mapped. Opening guide…`
         : 'No prerequisites detected for this page.'
       resultsEl.innerHTML = renderLessonTeaser(analysis.lessons)
       openButton.hidden = count === 0
+      if (lastGuideId && count > 0) {
+        window.open(`${webBase}/guide?id=${encodeURIComponent(lastGuideId)}`, '_blank', 'noopener')
+        statusEl.textContent = `${count} topics mapped. Guide opened in a new tab.`
+      }
     } catch (error) {
       if (error instanceof NotSignedInError) {
-        statusEl.textContent = 'Opening Google sign-in...'
-        // The background worker runs the sign-in (content scripts can't). On success, retry.
-        chrome.runtime.sendMessage({ type: 'SIMPLY_SIGN_IN' }, (response) => {
-          if (chrome.runtime.lastError) {
-            statusEl.textContent = 'Sign-in interrupted — click Analyze again.'
-            return
-          }
-          if (response?.ok) {
-            statusEl.textContent = 'Signed in — click Analyze again.'
-          } else {
-            statusEl.textContent = response?.error ?? 'Sign-in failed.'
-          }
-        })
+        statusEl.textContent = 'Opening sign-in...'
+        const signIn = await signInViaBackground()
+        if (signIn.ok) {
+          statusEl.textContent = 'Signed in. Analyzing...'
+          await runAnalyze()
+          return
+        }
+        statusEl.textContent = signIn.error ?? 'Sign-in failed.'
       } else {
         statusEl.textContent = error instanceof Error ? error.message : 'Could not reach the Simply API.'
       }
     } finally {
       analyzeButton.disabled = false
     }
-  })
+  }
+
+  analyzeButton?.addEventListener('click', () => void runAnalyze())
 
   openButton?.addEventListener('click', () => {
     if (!statusEl || !openButton) return
@@ -349,7 +260,7 @@ function mountWidget() {
       return
     }
     window.open(`${webBase}/guide?id=${encodeURIComponent(lastGuideId)}`, '_blank', 'noopener')
-    statusEl.textContent = 'Opened the full guide in a new tab.'
+    statusEl.textContent = 'Guide opened in a new tab.'
   })
 }
 
