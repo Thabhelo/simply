@@ -39,7 +39,9 @@ console.log(`Simply: guide store (${guideStoreMode()})`)
 // we use tokens rather than cookies, there are no ambient credentials for a cross-origin
 // site to abuse.
 app.use(cors())
-app.use(express.json({ limit: '5mb' }))
+// Real payload ceiling is the 120k text field (+ JSON overhead); cap well below
+// the old 5mb so oversized bodies are rejected before the blocking JSON.parse.
+app.use(express.json({ limit: '512kb' }))
 
 const paperRequestSchema = z
   .object({
