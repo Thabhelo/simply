@@ -120,4 +120,4 @@ One-time setup (GCP deploy SA + GitHub secrets):
 
 Requires `gcloud auth login`, `gh auth login` (with secret write access to the repo),
 secrets in `apps/api/.env`, and billing on project `simply-def0f-e4e3f`.
-See `scripts/setup-firebase-auth.md`.
+See `docs/oauth-consent-setup.md` and `apps/api/.env.example`.

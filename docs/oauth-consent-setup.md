@@ -41,3 +41,25 @@ No additional sensitive scopes required.
 3. Analyze a paper on arXiv.
 
 If you see “access blocked” or “app not verified”, add your account as a test user (Testing mode) or complete verification (Production).
+
+## 5. Extension OAuth client
+
+1. Open [GCP Credentials](https://console.cloud.google.com/apis/credentials?project=simply-def0f-e4e3f).
+2. Under **OAuth 2.0 Client IDs**, copy the **Web client** ID (auto-created when the Firebase web app was registered).
+3. Edit that Web client → **Authorized redirect URIs** → add the extension redirect (from `chrome://extensions`, extension ID `jjpldcfebfpphoobponjaohplkkhkcnl`):
+   ```text
+   https://jjpldcfebfpphoobponjaohplkkhkcnl.chromiumapp.org/
+   ```
+4. Paste the client ID into `apps/extension/src/auth.ts` → `OAUTH_CLIENT_ID`.
+5. Rebuild: `npm run build --workspace apps/extension`
+
+## 6. API service account (local dev)
+
+Copy `apps/api/.env.example` to `apps/api/.env` and set:
+
+- `FIREBASE_SERVICE_ACCOUNT_PATH` — path to your Firebase Admin SDK JSON (outside the repo)
+- `GEMINI_API_KEY` — from Google AI Studio
+
+On Cloud Run, `FIREBASE_SERVICE_ACCOUNT_B64` is synced via `scripts/deploy-gcp.sh` / GitHub Actions (see `scripts/setup-github-deploy.sh`).
+
+Enable **Google** under [Firebase Authentication → Sign-in method](https://console.firebase.google.com/project/simply-def0f-e4e3f/authentication/providers). Landing sign-in uses `src/firebase.ts` (public config) with `signInWithPopup`.

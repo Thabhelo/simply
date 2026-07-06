@@ -92,7 +92,7 @@ export async function ensureValidSession(): Promise<SessionProfile | null> {
 // for a Firebase session. Resolves with the signed-in email.
 export async function signIn(): Promise<string | undefined> {
   if (!OAUTH_CLIENT_ID) {
-    throw new Error('Extension OAuth client ID is not configured. See scripts/setup-firebase-auth.md.')
+    throw new Error('Extension OAuth client ID is not configured. See docs/oauth-consent-setup.md.')
   }
   const redirectUri = chrome.identity.getRedirectURL()
   const nonce = crypto.randomUUID()
