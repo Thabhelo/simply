@@ -97,3 +97,27 @@ shareable `/guide?id=…` URL. The backend serves the rendered guide from
 Without a key, the API runs in **basic mode** (deterministic regex concept
 detection) so the demo still works offline. Each analysis is cached in memory
 per paper, so repeat requests for the same paper are instant.
+
+## Production (GCP)
+
+| Service | URL |
+|---------|-----|
+| Web (Firebase Hosting) | https://simply-def0f-e4e3f.web.app |
+| API (Cloud Run) | https://simply-api-k7ux27sa4q-uc.a.run.app |
+
+Redeploy everything:
+
+```bash
+./scripts/deploy-all-gcp.sh
+```
+
+**Auto-deploy on merge to `main`:** GitHub Actions runs `.github/workflows/deploy.yml`.
+One-time setup (GCP deploy SA + GitHub secrets):
+
+```bash
+./scripts/setup-github-deploy.sh
+```
+
+Requires `gcloud auth login`, `gh auth login` (with secret write access to the repo),
+secrets in `apps/api/.env`, and billing on project `simply-def0f-e4e3f`.
+See `scripts/setup-firebase-auth.md`.

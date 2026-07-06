@@ -4,24 +4,51 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Simply</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
     <script type="module" src="/src/popup.ts"></script>
   </head>
   <body>
-    <main>
-      <p class="eyebrow">Simply</p>
-      <h1>Explain this paper</h1>
-      <p class="hint">
-        Open an arXiv paper, select a dense paragraph if needed, then generate a study guide.
-      </p>
-      <div id="auth-row">
-        <span id="auth-status">Not signed in</span>
-        <button id="signin" type="button">Sign in</button>
-        <button id="signout" type="button" hidden>Sign out</button>
-      </div>
-      <button id="analyze" type="button">Analyze current page</button>
-      <button id="download" type="button">Download guide PDF</button>
-      <section id="status" role="status">Waiting for a paper.</section>
-      <section id="results"></section>
+    <main class="simply-shell">
+      <header class="simply-head">
+        <p class="brand">simply</p>
+        <div id="auth-slot" class="auth-slot" data-state="loading" aria-live="polite">
+          <div id="auth-loading" class="auth-panel auth-loading">Checking sign-in…</div>
+          <div id="auth-signed-out" class="auth-panel">
+            <button id="signin" type="button" class="auth-signin-btn">Sign in with Google</button>
+          </div>
+          <div id="auth-signed-in" class="auth-panel">
+            <div class="auth-user-chip">
+              <span id="avatar" class="avatar" aria-hidden="true"></span>
+              <span id="auth-label" class="auth-label"></span>
+              <button id="signout" type="button" class="auth-signout-link">Sign out</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <section class="mock-window simply-popup-card" aria-label="Simply">
+        <div class="window-bar" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+        <span class="tiny-pill">Prerequisite guide</span>
+        <h2 class="simply-title">Build a calm reading guide for this paper.</h2>
+        <p class="simply-copy">
+          Simply reads the page you have open and maps the background you need for a first pass.
+        </p>
+        <p id="auth-hint" class="auth-hint" hidden>Sign in with Google to analyze papers and save guides.</p>
+        <div class="simply-actions">
+          <button id="analyze" class="button primary" type="button">Analyze this paper</button>
+        </div>
+        <p id="status" class="simply-status" role="status"></p>
+        <div id="results" class="lessons"></div>
+      </section>
     </main>
   </body>
 </html>

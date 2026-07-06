@@ -8,21 +8,30 @@
     "apps/extension"
   ],
   "scripts": {
-    "dev": "concurrently \"vite --host 0.0.0.0\" \"npm run dev --workspace apps/api\"",
-    "dev:web": "vite --host 0.0.0.0",
+    "predev": "bash scripts/free-port.sh 5173",
+    "dev": "concurrently \"vite --host 0.0.0.0 --port 5173 --strictPort\" \"npm run dev --workspace apps/api\"",
+    "dev:web": "npm run predev && vite --host 0.0.0.0 --port 5173 --strictPort",
     "dev:api": "npm run dev --workspace apps/api",
     "dev:extension": "npm run dev --workspace apps/extension",
     "build": "tsc -b && vite build && npm run build --workspaces",
+    "build:web": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.1",
+    "@excalidraw/mermaid-to-excalidraw": "^2.2.2",
+    "firebase": "^12.15.0",
     "framer-motion": "^12.40.0",
     "katex": "^0.17.0",
     "lucide-react": "^1.21.0",
     "mermaid": "^11.16.0",
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "react-markdown": "^10.1.0",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

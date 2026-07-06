@@ -13,10 +13,47 @@
     "type": "module"
   },
   "permissions": ["activeTab", "scripting", "identity", "storage"],
-  "host_permissions": ["http://localhost:8787/*", "http://*/*", "https://*/*"],
+  "host_permissions": [
+    "https://simply-api-k7ux27sa4q-uc.a.run.app/*",
+    "http://localhost:8787/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
+      "matches": [
+        "*://arxiv.org/*",
+        "*://*.arxiv.org/*",
+        "*://openreview.net/*",
+        "*://*.openreview.net/*",
+        "*://biorxiv.org/*",
+        "*://*.biorxiv.org/*",
+        "*://medrxiv.org/*",
+        "*://*.medrxiv.org/*",
+        "*://ssrn.com/*",
+        "*://*.ssrn.com/*",
+        "*://aclanthology.org/*",
+        "*://*.aclanthology.org/*",
+        "*://proceedings.mlr.press/*",
+        "*://*.proceedings.mlr.press/*",
+        "*://papers.nips.cc/*",
+        "*://*.papers.nips.cc/*",
+        "*://neurips.cc/*",
+        "*://*.neurips.cc/*",
+        "*://ieee.org/*",
+        "*://*.ieee.org/*",
+        "*://springer.com/*",
+        "*://*.springer.com/*",
+        "*://sciencedirect.com/*",
+        "*://*.sciencedirect.com/*",
+        "*://nature.com/*",
+        "*://*.nature.com/*",
+        "*://science.org/*",
+        "*://*.science.org/*",
+        "*://frontiersin.org/*",
+        "*://*.frontiersin.org/*",
+        "*://plos.org/*",
+        "*://*.plos.org/*",
+        "file:///*/*.pdf"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle"
     }

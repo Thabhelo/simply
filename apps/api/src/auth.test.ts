@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import type { Request, Response } from 'express'
+import type { Response } from 'express'
 import { createRequireAuth, type AuthedRequest } from './auth.js'
 
 function mockRes() {

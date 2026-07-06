@@ -6,7 +6,8 @@ import { defineConfig } from 'vite'
 // self-contained IIFE, because a classic MV3 content script cannot use ES `import`.
 export default defineConfig({
   build: {
-    emptyOutDir: true,
+    // Keep false so the content-script watch build is not wiped on popup rebuilds.
+    emptyOutDir: false,
     outDir: 'dist',
     rollupOptions: {
       input: {

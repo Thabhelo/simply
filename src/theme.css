@@ -1,0 +1,22 @@
+@import '../shared/simply-ui.css';
+
+:root {
+  --color-tint-lilac: #f0eaf5;
+}
+
+:root[data-theme='dark'] {
+  --color-bg: #1f1814;
+  --color-surface: #2a221c;
+  --color-ink: #f5ebe3;
+  --color-muted: #b8a99a;
+  --color-border: #4a3f36;
+  --color-accent: #e07040;
+  --color-accent-hover: #f08050;
+  --color-accent-soft: #8a5030;
+  --color-link: #7eb3d8;
+  --color-tint-peach: #3a2e26;
+  --color-tint-sky: #263038;
+  --color-tint-sage: #283028;
+  --color-tint-lilac: #302830;
+  --color-tint-sand: #322c24;
+}
