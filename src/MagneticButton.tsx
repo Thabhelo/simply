@@ -1,6 +1,7 @@
 import {
   useState,
   useEffect,
+  useRef,
   type ReactNode,
   type CSSProperties,
   type MouseEvent,
@@ -34,6 +35,7 @@ export default function MagneticButton({
   } | null>(null)
   const [expanded, setExpanded] = useState(false)
   const [leaving, setLeaving] = useState(false)
+  const circleIdRef = useRef(0)
 
   useEffect(() => {
     if (circle && !leaving) {
@@ -51,7 +53,7 @@ export default function MagneticButton({
     const dx = Math.max(x, rect.width - x)
     const dy = Math.max(y, rect.height - y)
     const size = Math.ceil(Math.sqrt(dx * dx + dy * dy) * 2)
-    setCircle({ x, y, id: Date.now(), size })
+    setCircle({ x, y, id: circleIdRef.current++, size })
   }
 
   const handleLeave = () => {
