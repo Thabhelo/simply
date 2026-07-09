@@ -9,12 +9,15 @@ const GuidePage = lazy(() => import('./GuidePage.tsx'))
 const LibraryPage = lazy(() => import('./LibraryPage.tsx'))
 const LegalPage = lazy(() => import('./LegalPage.tsx'))
 
+const ContactPage = lazy(() => import('./ContactPage.tsx'))
+
 function routeFor(path: string) {
   if (path === '/guide') return <GuidePage />
   if (path === '/library') return <LibraryPage />
   if (path === '/privacy') return <LegalPage doc={privacyPolicy} />
   if (path === '/terms') return <LegalPage doc={termsOfService} />
   if (path === '/security') return <LegalPage doc={securityPage} />
+  if (path === '/contact') return <ContactPage />
   return <App />
 }
 

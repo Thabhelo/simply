@@ -80,7 +80,14 @@ else
   echo "WARN: No Firebase service account provided. Auth will run in open mode on Cloud Run."
 fi
 
+if [[ -n "${RESEND_API_KEY:-}" ]]; then
+  ensure_secret RESEND_API_KEY "$RESEND_API_KEY"
+else
+  echo "WARN: RESEND_API_KEY not set. Contact form will return 503 until configured."
+fi
+
 echo "==> Deploying Cloud Run service..."
+ENV_VARS="WEB_APP_URL=${WEB_APP_URL:-https://simply-def0f-e4e3f.web.app}"
 DEPLOY_ARGS=(
   run deploy "$SERVICE_NAME"
   --project="$PROJECT_ID"
@@ -96,9 +103,15 @@ DEPLOY_ARGS=(
   # Chromium PDF render peaks ~0.5-0.8Gi per request; cap concurrency so a
   # single 1Gi instance never runs enough simultaneous renders to OOM.
   --concurrency=4
-  --set-env-vars="WEB_APP_URL=${WEB_APP_URL:-https://simply-def0f-e4e3f.web.app}"
   --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest"
 )
+
+if gcloud secrets describe RESEND_API_KEY --project="$PROJECT_ID" &>/dev/null; then
+  DEPLOY_ARGS+=(--set-secrets="RESEND_API_KEY=RESEND_API_KEY:latest")
+  ENV_VARS="${ENV_VARS},CONTACT_TO_EMAIL=${CONTACT_TO_EMAIL:-thabhelo.duve@talladega.edu},CONTACT_FROM_EMAIL=${CONTACT_FROM_EMAIL:-Simply <onboarding@resend.dev>}"
+fi
+
+DEPLOY_ARGS+=(--set-env-vars="$ENV_VARS")
 
 if gcloud secrets describe FIREBASE_SERVICE_ACCOUNT_B64 --project="$PROJECT_ID" &>/dev/null; then
   DEPLOY_ARGS+=(--set-secrets="FIREBASE_SERVICE_ACCOUNT_B64=FIREBASE_SERVICE_ACCOUNT_B64:latest")
@@ -106,7 +119,7 @@ fi
 
 PROJECT_NUMBER="$(gcloud projects describe "$PROJECT_ID" --format='value(projectNumber)')"
 RUN_SA="${PROJECT_NUMBER}-compute@developer.gserviceaccount.com"
-for secret in GEMINI_API_KEY FIREBASE_SERVICE_ACCOUNT_B64; do
+for secret in GEMINI_API_KEY FIREBASE_SERVICE_ACCOUNT_B64 RESEND_API_KEY; do
   if gcloud secrets describe "$secret" --project="$PROJECT_ID" &>/dev/null; then
     gcloud secrets add-iam-policy-binding "$secret" \
       --project="$PROJECT_ID" \

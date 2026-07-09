@@ -339,6 +339,7 @@ function App() {
               <a href="/privacy">Privacy</a>
               <a href="/terms">Terms</a>
               <a href="/security">Security</a>
+              <a href="/contact">Contact</a>
             </div>
           </div>
         </div>

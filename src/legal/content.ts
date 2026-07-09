@@ -189,7 +189,7 @@ export const securityPage: LegalDoc = {
     {
       heading: 'Reporting issues',
       body: [
-        `If you discover a security concern, email ${contact} with steps to reproduce.`,
+        `Use the contact form at ${site}/contact or email ${contact} with steps to reproduce.`,
         'Please do not publicly disclose active vulnerabilities before we have had a reasonable time to respond.',
       ],
     },

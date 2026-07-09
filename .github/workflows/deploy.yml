@@ -42,6 +42,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FIREBASE_SERVICE_ACCOUNT_B64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_B64 }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: |
           chmod +x scripts/deploy-all-gcp.sh scripts/deploy-gcp.sh
           ./scripts/deploy-all-gcp.sh

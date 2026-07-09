@@ -85,6 +85,11 @@ echo "==> Setting GitHub secrets on ${REPO}..."
 gh secret set GCP_SERVICE_ACCOUNT_KEY --repo "$REPO" < "$KEY_FILE"
 gh secret set GEMINI_API_KEY --repo "$REPO" --body "$GEMINI_API_KEY"
 gh secret set FIREBASE_SERVICE_ACCOUNT_B64 --repo "$REPO" --body "$FIREBASE_B64"
+if [[ -n "${RESEND_API_KEY:-}" ]]; then
+  gh secret set RESEND_API_KEY --repo "$REPO" --body "$RESEND_API_KEY"
+else
+  echo "WARN: RESEND_API_KEY not set locally — contact form stays disabled until you add it."
+fi
 
 echo ""
 echo "Done. Merges to main will run .github/workflows/deploy.yml"

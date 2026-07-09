@@ -13,6 +13,13 @@ import { cleanExcalidrawElements } from './sketch.js'
 import { requireAuth } from './auth.js'
 import { getCachedAiGuide, getGuide, guideStoreMode, saveGuide } from './guideStore.js'
 import { guideExportUrl, renderGuidePdf, renderGuidePdfFlattened } from './pdfRender.js'
+import {
+  checkContactRateLimit,
+  contactRequestSchema,
+  ContactRateLimitError,
+  ContactUnavailableError,
+  sendContactEmail,
+} from './contact.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
@@ -30,6 +37,11 @@ console.log(
   hasGemini()
     ? `Simply: AI mode enabled (${DETECT_MODEL} / ${TEACH_MODEL}, ${getGeminiApiKeys().length} key(s))`
     : 'Simply: GEMINI_API_KEY not set. Running in basic mode.',
+)
+console.log(
+  process.env.RESEND_API_KEY?.trim()
+    ? 'Simply: contact email enabled (Resend)'
+    : 'Simply: RESEND_API_KEY not set. Contact form disabled.',
 )
 console.log(`Simply: guide store (${guideStoreMode()})`)
 
@@ -763,6 +775,48 @@ async function teachAll(prereqs: Prerequisite[], paperTitle: string): Promise<Le
 
 app.get('/health', (_request, response) => {
   response.json({ ok: true, service: 'simply-api' })
+})
+
+app.post('/api/contact', async (request, response) => {
+  const parsed = contactRequestSchema.safeParse({
+    ...request.body,
+    website: request.body?.website ?? request.body?._gotcha,
+  })
+
+  if (!parsed.success) {
+    response.status(400).json({ error: 'Invalid contact request', details: parsed.error.flatten() })
+    return
+  }
+
+  if (parsed.data.website) {
+    response.json({ ok: true })
+    return
+  }
+
+  const forwarded = request.headers['x-forwarded-for']
+  const ip =
+    typeof forwarded === 'string'
+      ? forwarded.split(',')[0]?.trim() || 'unknown'
+      : forwarded?.[0] ?? request.socket.remoteAddress ?? 'unknown'
+
+  try {
+    checkContactRateLimit(ip)
+    await sendContactEmail(parsed.data)
+    response.json({ ok: true })
+  } catch (error) {
+    if (error instanceof ContactRateLimitError) {
+      response.status(429).json({ error: error.message })
+      return
+    }
+    if (error instanceof ContactUnavailableError) {
+      response.status(503).json({ error: error.message })
+      return
+    }
+    console.error('Simply: contact email failed:', error)
+    response.status(502).json({
+      error: error instanceof Error ? error.message : 'Could not send your message.',
+    })
+  }
 })
 
 app.get('/api/pexels/search', async (request, response) => {
