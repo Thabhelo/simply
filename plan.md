@@ -49,9 +49,6 @@ make the first pass through a dense research paper feel simpler.
 
 ### Day 3: Product polish and launch prep
 
-- Add waitlist capture and basic analytics.
-- Improve extension error states for Chrome PDF viewer limitations.
-- Add guide design polish and branded PDF layout.
 - Package extension for manual Chrome install.
 - Deploy landing page and API.
 - Record a short demo on the Concrete Dropout paper.

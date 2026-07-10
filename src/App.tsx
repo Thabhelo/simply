@@ -1,13 +1,9 @@
 import { motion } from 'framer-motion'
 import {
   ArrowUpRight,
-  BookOpenText,
-  Check,
   Download,
   FileText,
   Highlighter,
-  Layers3,
-  MessageCircle,
   Search,
 } from 'lucide-react'
 import AuthButton from './AuthButton'
@@ -85,16 +81,15 @@ function App() {
             </a>
             <a href="/library">Your papers</a>
             <a href="#guide">Guide</a>
-            <a href="#early">Early access</a>
           </div>
         </div>
         <div className="landing-nav-end">
           <MagneticButton
             circleColor="rgba(255,255,255,0.15)"
-            href="#early"
+            href={CHROME_STORE_URL}
             className="landing-nav-cta"
           >
-            Get access
+            Get the extension
             <ArrowUpRight size={14} />
           </MagneticButton>
           <AuthButton />
@@ -174,18 +169,19 @@ function App() {
             transition={{ duration: 0.6, delay: 0.7, ease: 'easeOut' }}
           >
             <MagneticButton
-              circleColor="rgba(0,0,0,0.05)"
-              href={CHROME_STORE_URL}
-              className="landing-btn landing-btn-secondary landing-cta-pulse"
-            >
-              Get the extension
-            </MagneticButton>
-            <MagneticButton
               circleColor="rgba(255,255,255,0.15)"
-              href="#early"
+              href={CHROME_STORE_URL}
               className="landing-btn landing-btn-primary landing-cta-pulse"
             >
-              Get early access
+              Get the extension
+              <ArrowUpRight size={15} />
+            </MagneticButton>
+            <MagneticButton
+              circleColor="rgba(0,0,0,0.05)"
+              href="https://arxiv.org/pdf/1606.08415v3"
+              className="landing-btn landing-btn-secondary landing-cta-pulse"
+            >
+              Try the demo paper
             </MagneticButton>
           </motion.div>
 
@@ -281,34 +277,22 @@ function App() {
         </div>
       </section>
 
-      <section className="landing-section landing-early" id="early">
+      <section className="landing-section landing-launch" id="launch">
         <motion.div
-          className="landing-early-card"
+          className="landing-launch-card"
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ duration: 0.7, ease }}
         >
-          <div className="landing-early-icons" aria-hidden="true">
-            <BookOpenText size={22} />
-            <MessageCircle size={22} />
-            <Layers3 size={22} />
-          </div>
-          <h2>Read the next paper with Simply.</h2>
+          <h2>Start reading with Simply.</h2>
           <p>
-            Be first to try the Chrome extension while we turn the starter into a real reading
-            companion.
+            Install the Chrome extension, open a research paper on arXiv, and get a calm
+            prerequisite guide in minutes.
           </p>
-          <form onSubmit={(e) => e.preventDefault()}>
-            <input type="email" placeholder="you@example.com" aria-label="Email address" />
-            <MagneticButton type="submit" className="landing-btn landing-btn-primary">
-              Get access
-              <Check size={15} />
-            </MagneticButton>
-          </form>
           <MagneticButton
             href={CHROME_STORE_URL}
-            className="landing-btn landing-btn-secondary landing-early-extension"
+            className="landing-btn landing-btn-primary landing-launch-cta"
           >
             Get the Chrome extension
             <ArrowUpRight size={15} />

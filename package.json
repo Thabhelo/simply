@@ -16,6 +16,7 @@
     "build": "tsc -b && vite build && npm run build --workspaces",
     "build:web": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "npm run test --workspace apps/api",
     "preview": "vite preview"
   },
   "dependencies": {
