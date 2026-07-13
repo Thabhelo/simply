@@ -10,10 +10,10 @@ Open: https://console.cloud.google.com/auth/branding?project=simply-def0f-e4e3f
 |-------|--------|
 | App name | Simply |
 | User support email | thabhelo.duve@talladega.edu |
-| App home page | https://simply-def0f-e4e3f.web.app |
-| Privacy policy | https://simply-def0f-e4e3f.web.app/privacy |
-| Terms of service | https://simply-def0f-e4e3f.web.app/terms |
-| Authorized domains | `simply-def0f-e4e3f.web.app`, `simply-def0f-e4e3f.firebaseapp.com`, `localhost` |
+| App home page | https://usesimply.us |
+| Privacy policy | https://usesimply.us/privacy |
+| Terms of service | https://usesimply.us/terms |
+| Authorized domains | `usesimply.us`, `simply-def0f-e4e3f.web.app`, `simply-def0f-e4e3f.firebaseapp.com`, `localhost` |
 
 ## 2. Audience
 
@@ -63,3 +63,20 @@ Copy `apps/api/.env.example` to `apps/api/.env` and set:
 On Cloud Run, `FIREBASE_SERVICE_ACCOUNT_B64` is synced via `scripts/deploy-gcp.sh` / GitHub Actions (see `scripts/setup-github-deploy.sh`).
 
 Enable **Google** under [Firebase Authentication → Sign-in method](https://console.firebase.google.com/project/simply-def0f-e4e3f/authentication/providers). Landing sign-in uses `src/firebase.ts` (public config) with `signInWithPopup`.
+
+## 7. Custom domain (`usesimply.us`)
+
+Production site URL: **https://usesimply.us** (DNS via Cloudflare Registrar; hosting stays on Firebase).
+
+```bash
+./scripts/setup-usesimply-domain.sh   # Auth domain + print Cloudflare DNS records
+```
+
+Manual steps (no CLI access from this repo):
+
+1. **Cloudflare DNS** — add the A + TXT records the script prints (grey cloud / DNS only until Firebase shows Connected).
+2. [OAuth branding](https://console.cloud.google.com/auth/branding?project=simply-def0f-e4e3f) — home/privacy/terms URLs + authorized domain `usesimply.us` (or run `./scripts/setup-oauth-consent.sh` after `gcloud auth login`).
+3. **Cloud Run** — `gcloud run services update simply-api --update-env-vars WEB_APP_URL=https://usesimply.us` (after `gcloud auth login`) so PDF export loads the custom domain.
+4. **Delete** any Cloudflare Pages/Workers project linked to the GitHub repo.
+
+Deploys stay on GitHub Actions → `.github/workflows/deploy.yml` (not Cloudflare Pages).

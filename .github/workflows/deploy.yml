@@ -9,6 +9,8 @@ on:
 env:
   GCP_PROJECT_ID: simply-def0f-e4e3f
   GCP_REGION: us-central1
+  WEB_BASE: https://usesimply.us
+  WEB_APP_URL: https://usesimply.us
 
 jobs:
   deploy:
@@ -42,6 +44,8 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           FIREBASE_SERVICE_ACCOUNT_B64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_B64 }}
+          WEB_BASE: ${{ env.WEB_BASE }}
+          WEB_APP_URL: ${{ env.WEB_APP_URL }}
         run: |
           chmod +x scripts/deploy-all-gcp.sh scripts/deploy-gcp.sh
           ./scripts/deploy-all-gcp.sh

@@ -96,7 +96,7 @@ DEPLOY_ARGS=(
   # Chromium PDF render peaks ~0.5-0.8Gi per request; cap concurrency so a
   # single 1Gi instance never runs enough simultaneous renders to OOM.
   --concurrency=4
-  --set-env-vars="WEB_APP_URL=${WEB_APP_URL:-https://simply-def0f-e4e3f.web.app}"
+  --set-env-vars="WEB_APP_URL=${WEB_APP_URL:-https://usesimply.us}"
   --set-secrets="GEMINI_API_KEY=GEMINI_API_KEY:latest"
 )
 

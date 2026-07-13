@@ -102,7 +102,7 @@ per paper, so repeat requests for the same paper are instant.
 
 | Service | URL |
 |---------|-----|
-| Web (Firebase Hosting) | https://simply-def0f-e4e3f.web.app |
+| Web (Firebase Hosting) | https://usesimply.us |
 | API (Cloud Run) | https://simply-api-k7ux27sa4q-uc.a.run.app |
 
 Redeploy everything:
