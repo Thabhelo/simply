@@ -31,4 +31,5 @@ serviceAccountKey.json
 *.sw?
 .firebase
 .vercel
+public/simply-chrome-extension-*.zip
 

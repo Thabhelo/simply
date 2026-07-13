@@ -8,9 +8,8 @@ and ML jargon needed to read the paper.
 ## Apps
 
 - `src/`: Vite React landing page.
-- `apps/api`: Express API for text analysis and generated PDF reports.
+- `apps/api`: Express API for text analysis and generated guides.
 - `apps/extension`: Manifest V3 Chrome extension popup and content script.
-- `plan.md`: weekend product and technical plan.
 
 ## Local development
 
@@ -43,10 +42,10 @@ blocks direct text access, the extension can fall back to URL-based backend inge
 ## Chrome Web Store
 
 ```bash
-./scripts/package-extension.sh
+npm run package:extension
 ```
 
-Upload zip + listing checklist: [`docs/chrome-web-store.md`](docs/chrome-web-store.md).
+Output: `public/simply-chrome-extension-<version>.zip`
 
 ## API demo
 
@@ -120,12 +119,4 @@ Redeploy everything:
 ```
 
 **Auto-deploy on merge to `main`:** GitHub Actions runs `.github/workflows/deploy.yml`.
-One-time setup (GCP deploy SA + GitHub secrets):
-
-```bash
-./scripts/setup-github-deploy.sh
-```
-
-Requires `gcloud auth login`, `gh auth login` (with secret write access to the repo),
-secrets in `apps/api/.env`, and billing on project `simply-def0f-e4e3f`.
-See `docs/oauth-consent-setup.md` and `apps/api/.env.example`.
+See `apps/api/.env.example` for required secrets and env vars.

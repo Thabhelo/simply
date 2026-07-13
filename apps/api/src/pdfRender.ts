@@ -1,6 +1,4 @@
 import chromium from '@sparticuz/chromium'
-import * as mupdf from 'mupdf'
-import PDFDocument from 'pdfkit'
 import puppeteer, { type Browser } from 'puppeteer-core'
 
 /*
@@ -88,55 +86,5 @@ export async function renderGuidePdf(url: string): Promise<Buffer> {
     return Buffer.from(pdf)
   } finally {
     await page.close().catch(() => {})
-  }
-}
-
-// Rasterization DPI for the flattened fallback: crisp enough for text, small enough
-// to keep file size and memory reasonable.
-const FLATTEN_DPI = 150
-
-/**
- * Guaranteed-compatible fallback: renders the guide PDF, then rasterizes every
- * page to an image and rebuilds an image-only PDF. The result has zero fonts,
- * so it renders identically in any viewer (including ones that mishandle the
- * Type3 glyphs headless Chromium emits). Trade-off: text is no longer
- * selectable and the file is larger. Chromium's pagination is preserved (one
- * source page -> one image page at the same dimensions).
- */
-export async function renderGuidePdfFlattened(url: string): Promise<Buffer> {
-  const vector = await renderGuidePdf(url)
-
-  const doc = mupdf.Document.openDocument(vector, 'application/pdf')
-  const scale = FLATTEN_DPI / 72
-  try {
-    const pageCount = doc.countPages()
-    return await new Promise<Buffer>((resolve, reject) => {
-      const out = new PDFDocument({ autoFirstPage: false })
-      const chunks: Buffer[] = []
-      out.on('data', (c: Buffer) => chunks.push(c))
-      out.on('end', () => resolve(Buffer.concat(chunks)))
-      out.on('error', reject)
-      try {
-        // Rasterize and embed one page at a time so peak memory holds a single
-        // page image rather than every page's bitmap at once. Free each mupdf
-        // pixmap/page immediately to release the WASM heap.
-        for (let i = 0; i < pageCount; i++) {
-          const page = doc.loadPage(i)
-          const pixmap = page.toPixmap(mupdf.Matrix.scale(scale, scale), mupdf.ColorSpace.DeviceRGB, false)
-          const png = Buffer.from(pixmap.asPNG())
-          const wPt = (pixmap.getWidth() * 72) / FLATTEN_DPI
-          const hPt = (pixmap.getHeight() * 72) / FLATTEN_DPI
-          pixmap.destroy()
-          page.destroy()
-          out.addPage({ size: [wPt, hPt], margin: 0 })
-          out.image(png, 0, 0, { width: wPt, height: hPt })
-        }
-        out.end()
-      } catch (error) {
-        reject(error)
-      }
-    })
-  } finally {
-    doc.destroy()
   }
 }

@@ -2,7 +2,6 @@ import './load-env.js'
 import cors from 'cors'
 import express from 'express'
 import { PDFParse } from 'pdf-parse'
-import PDFDocument from 'pdfkit'
 import { z } from 'zod'
 import { Type } from '@google/genai'
 import { formatGeminiError, getGeminiApiKeys, hasGemini, textModelChain, withGeminiModelRetry, withGeminiRetry } from './gemini.js'
@@ -14,7 +13,7 @@ import { requireAuth } from './auth.js'
 import { firebaseConfigured } from './firebaseAdmin.js'
 import { getAuth } from 'firebase-admin/auth'
 import { getCachedAiGuide, getGuide, guideStoreMode, saveGuide } from './guideStore.js'
-import { guideExportUrl, renderGuidePdf, renderGuidePdfFlattened } from './pdfRender.js'
+import { guideExportUrl, renderGuidePdf } from './pdfRender.js'
 
 const app = express()
 const port = Number(process.env.PORT ?? 8787)
@@ -659,49 +658,8 @@ async function attachIllustrations(drafts: DraftLesson[], paperTitle: string): P
   return lessons
 }
 
-function stripLatexForPdf(text: string): string {
-  return text
-    .replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => math.replace(/\\[a-zA-Z]+(\{[^{}]*\})?/g, ' ').replace(/[{}_^\\]/g, ' ').replace(/\s+/g, ' ').trim())
-    .replace(/\$([^$]+)\$/g, (_, math) => math.replace(/\\[a-zA-Z]+(\{[^{}]*\})?/g, ' ').replace(/[{}_^\\]/g, ' ').replace(/\s+/g, ' ').trim())
-    .replace(/\*\*([^*]+)\*\*/g, '$1')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
 function sanitizePdfFilename(title: string): string {
   return title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '-').trim() || 'simply-guide'
-}
-
-function writeGuidePdf(report: Guide, response: express.Response) {
-  const document = new PDFDocument({ margin: 48 })
-  response.setHeader('Content-Type', 'application/pdf')
-  response.setHeader('Content-Disposition', 'attachment; filename="simply-guide.pdf"')
-  document.pipe(response)
-
-  document.fontSize(22).fillColor('#101827').text(report.title, { lineGap: 8 })
-  document.moveDown()
-  document.fontSize(11).fillColor('#667085').text('Plain-text export. For rendered math and diagrams, open the guide in your browser.', { lineGap: 4 })
-  document.moveDown()
-  document.fontSize(12).fillColor('#667085').text(stripLatexForPdf(report.overview || report.summary))
-  if (report.mode === 'basic') {
-    document.moveDown(0.5).fontSize(10).fillColor('#c24a1a').text(hasGemini() ? 'Basic mode. AI lessons hit a rate or quota limit; showing prerequisite areas only.' : 'Basic mode. Set GEMINI_API_KEY for full AI lessons.')
-  }
-  document.moveDown()
-
-  report.lessons.forEach((lesson, index) => {
-    document.moveDown(0.5)
-    document.fillColor('#e8642a').fontSize(10).text(lesson.area.toUpperCase())
-    document.fillColor('#101827').fontSize(15).text(`${index + 1}. ${lesson.title}`)
-    if (lesson.hook) document.fillColor('#344054').fontSize(11).text(stripLatexForPdf(lesson.hook), { lineGap: 4 })
-    if (lesson.definition) document.fillColor('#101827').fontSize(11).text(`Definition: ${stripLatexForPdf(lesson.definition)}`, { lineGap: 4 })
-    if (lesson.intuition) document.fillColor('#344054').fontSize(11).text(stripLatexForPdf(lesson.intuition), { lineGap: 4 })
-    if (lesson.example) document.fillColor('#344054').fontSize(11).text(`Example: ${stripLatexForPdf(lesson.example)}`, { lineGap: 4 })
-    if (lesson.inThisPaper) document.fillColor('#667085').fontSize(11).text(`In this paper: ${stripLatexForPdf(lesson.inThisPaper)}`, { lineGap: 4 })
-  })
-
-  document.fillColor('#101827').fontSize(16).text('Reading plan')
-  report.nextSteps.forEach((step) => document.fillColor('#344054').fontSize(12).text(`- ${step}`))
-  document.end()
 }
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
@@ -916,12 +874,9 @@ app.get('/api/guide/:id/guide.pdf', async (request, response) => {
     response.status(404).json({ error: 'Guide not found. Re-analyze the paper.' })
     return
   }
-  // ?flatten=1 → image-only PDF (zero fonts) that renders in any viewer, for
-  // clients where the vector Type3 glyphs don't display (e.g. some in-app previews).
-  const flatten = request.query.flatten === '1' || request.query.flatten === 'true'
   try {
     const url = guideExportUrl(id)
-    const pdf = flatten ? await renderGuidePdfFlattened(url) : await renderGuidePdf(url)
+    const pdf = await renderGuidePdf(url)
     response.setHeader('Content-Type', 'application/pdf')
     response.setHeader('Content-Disposition', `inline; filename="${sanitizePdfFilename(guide.title)}.pdf"`)
     response.send(pdf)
@@ -929,43 +884,6 @@ app.get('/api/guide/:id/guide.pdf', async (request, response) => {
     console.error('guide.pdf render failed:', error)
     response.status(503).json({
       error: 'Could not render the PDF right now. Try the in-browser download instead.',
-    })
-  }
-})
-
-app.get('/api/guide/:id/report.pdf', requireAuth, async (request, response) => {
-  const id = request.params.id
-  if (Array.isArray(id)) {
-    response.status(400).json({ error: 'Invalid guide id.' })
-    return
-  }
-  const guide = await getGuide(id)
-  if (!guide) {
-    response.status(404).json({ error: 'Guide not found. Re-analyze the paper.' })
-    return
-  }
-  writeGuidePdf(guide, response)
-})
-
-app.post('/api/report.pdf', requireAuth, async (request, response) => {
-  const parsed = paperRequestSchema.safeParse(request.body)
-
-  if (!parsed.success) {
-    response.status(400).json({ error: 'Invalid report request', details: parsed.error.flatten() })
-    return
-  }
-
-  try {
-    const paper = await resolvePaperInput(parsed.data)
-    const report = await analyzePaper(paper)
-    writeGuidePdf(report, response)
-  } catch (error) {
-    if (response.headersSent) {
-      response.end()
-      return
-    }
-    response.status(422).json({
-      error: error instanceof Error ? error.message : 'Could not generate a report for this paper.',
     })
   }
 })
