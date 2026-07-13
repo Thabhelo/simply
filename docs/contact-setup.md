@@ -4,7 +4,9 @@ Free tier (200 emails/month). No backend.
 
 ## EmailJS template (one-time)
 
-[Email Templates](https://dashboard.emailjs.com/admin/templates) → **Create**:
+[Email Templates](https://dashboard.emailjs.com/admin/templates) → **Create**.
+
+### Template settings (above the editor)
 
 | Field | Value |
 |-------|-------|
@@ -12,7 +14,20 @@ Free tier (200 emails/month). No backend.
 | **From name** | `Simply` |
 | **Reply-To** | `{{reply_to}}` |
 | **Subject** | `{{subject}}` |
-| **Content** | `{{{body}}}` |
+
+### Content (paste from `docs/emailjs-template.html`)
+
+Copy the full HTML from [`docs/emailjs-template.html`](./emailjs-template.html) into the template **Content** editor (HTML mode).
+
+Template variables used:
+
+| Variable | Sent by app |
+|----------|-------------|
+| `{{subject}}` | `[Simply] Topic — Name` |
+| `{{reply_to}}` | Visitor email |
+| `{{from_name}}` | Visitor name |
+| `{{topic}}` | Topic label |
+| `{{message}}` | Message body |
 
 Copy the **Template ID** (`template_…`), then run:
 
@@ -25,7 +40,6 @@ Copy the **Template ID** (`template_…`), then run:
 [Account → Security](https://dashboard.emailjs.com/admin/account/security):
 
 - Allowed domains: `usesimply.us`, `localhost`
-- Do **not** enable “API access from non-browser” (not needed)
 
 ## Env vars
 
@@ -35,4 +49,4 @@ Copy the **Template ID** (`template_…`), then run:
 | `VITE_EMAILJS_TEMPLATE_ID` | `.env` + GitHub secret |
 | `VITE_EMAILJS_PUBLIC_KEY` | `.env` + GitHub secret |
 
-Emails are styled in `src/contact.ts` (Simply palette) and signed **Simply · admin@usesimply.us · usesimply.us**.
+Emails are signed **Simply · admin@usesimply.us · usesimply.us** in the template footer.
