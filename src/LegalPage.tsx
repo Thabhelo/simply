@@ -18,6 +18,7 @@ export default function LegalPage({ doc }: LegalPageProps) {
           <a href="/privacy">Privacy</a>
           <a href="/terms">Terms</a>
           <a href="/security">Security</a>
+          <a href="/contact">Contact</a>
         </nav>
       </header>
 
@@ -40,6 +41,7 @@ export default function LegalPage({ doc }: LegalPageProps) {
         <a href="/privacy">Privacy</a>
         <a href="/terms">Terms</a>
         <a href="/security">Security</a>
+        <a href="/contact">Contact</a>
         <a href="/">Home</a>
       </footer>
     </main>

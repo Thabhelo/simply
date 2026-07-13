@@ -46,6 +46,9 @@ jobs:
           FIREBASE_SERVICE_ACCOUNT_B64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_B64 }}
           WEB_BASE: ${{ env.WEB_BASE }}
           WEB_APP_URL: ${{ env.WEB_APP_URL }}
+          VITE_EMAILJS_SERVICE_ID: ${{ secrets.VITE_EMAILJS_SERVICE_ID }}
+          VITE_EMAILJS_TEMPLATE_ID: ${{ secrets.VITE_EMAILJS_TEMPLATE_ID }}
+          VITE_EMAILJS_PUBLIC_KEY: ${{ secrets.VITE_EMAILJS_PUBLIC_KEY }}
         run: |
           chmod +x scripts/deploy-all-gcp.sh scripts/deploy-gcp.sh
           ./scripts/deploy-all-gcp.sh
