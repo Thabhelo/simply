@@ -1,87 +1,38 @@
 # Contact form (EmailJS)
 
-Simply's `/contact` page sends mail through [EmailJS](https://www.emailjs.com/) — free for up to **200 emails/month**, no backend or paid API key required.
+Free tier (200 emails/month). No backend.
 
-## 1. Create an EmailJS account
+## EmailJS template (one-time)
 
-Sign up at https://www.emailjs.com/ (free tier is enough).
+[Email Templates](https://dashboard.emailjs.com/admin/templates) → **Create**:
 
-## 2. Connect an email service
+| Field | Value |
+|-------|-------|
+| **To** | `admin@usesimply.us` |
+| **From name** | `Simply` |
+| **Reply-To** | `{{reply_to}}` |
+| **Subject** | `{{subject}}` |
+| **Content** | `{{{body}}}` |
 
-1. **Email Services** → **Add new service**
-2. Choose **Gmail** (or your inbox provider) and connect the account that should receive messages (`thabhelo.duve@talladega.edu`).
-3. Note the **Service ID** (e.g. `service_abc123`).
-
-## 3. Create an email template
-
-1. **Email Templates** → **Create new template**
-2. Suggested settings:
-   - **To:** your inbox address
-   - **Reply-To:** `{{reply_to}}`
-   - **Subject:** `{{subject}}`
-3. Body example:
-
-```
-New Simply contact message
-
-Topic: {{topic}}
-Name: {{from_name}}
-Email: {{reply_to}}
-
-{{message}}
-```
-
-4. Note the **Template ID** (e.g. `template_xyz789`).
-
-Template variables sent by the app:
-
-| Variable    | Description              |
-|-------------|--------------------------|
-| `from_name` | Visitor name             |
-| `reply_to`  | Visitor email (reply-to) |
-| `topic`     | Human-readable topic     |
-| `message`   | Message body             |
-| `subject`   | `[Simply] Topic — Name`  |
-
-## 4. Get your public key
-
-**Account** → **API keys** → copy the **Public Key**.
-
-## 5. Restrict by domain (recommended)
-
-**Account** → **Security** → allow only:
-
-- `usesimply.us`
-- `localhost` (for local dev)
-
-## 6. Configure env vars
-
-Local dev — create `.env` in the repo root:
+Copy the **Template ID** (`template_…`), then run:
 
 ```bash
-VITE_EMAILJS_SERVICE_ID=service_xxxx
-VITE_EMAILJS_TEMPLATE_ID=template_xxxx
-VITE_EMAILJS_PUBLIC_KEY=your_public_key
+./scripts/setup-emailjs-env.sh template_xxxx
 ```
 
-Production — add GitHub secrets (Settings → Secrets → Actions):
+## Security
 
-```bash
-gh secret set VITE_EMAILJS_SERVICE_ID --body "service_xxxx"
-gh secret set VITE_EMAILJS_TEMPLATE_ID --body "template_xxxx"
-gh secret set VITE_EMAILJS_PUBLIC_KEY --body "your_public_key"
-```
+[Account → Security](https://dashboard.emailjs.com/admin/account/security):
 
-Redeploy (push to `main` or run the Deploy workflow). The build injects these into the static site.
+- Allowed domains: `usesimply.us`, `localhost`
+- Do **not** enable “API access from non-browser” (not needed)
 
-## 7. Test
+## Env vars
 
-```bash
-npm run dev:web
-```
+| Variable | Where |
+|----------|-------|
+| `VITE_EMAILJS_SERVICE_ID` | `.env` + GitHub secret |
+| `VITE_EMAILJS_TEMPLATE_ID` | `.env` + GitHub secret |
+| `VITE_EMAILJS_PUBLIC_KEY` | `.env` + GitHub secret |
 
-Open http://localhost:5173/contact, submit a test message, and confirm it arrives in your inbox with the correct reply-to.
-
-## Fallback
-
-If EmailJS is not configured, the page still shows a **mailto** link. The submit button stays disabled until the three env vars are set.
+Emails are styled in `src/contact.ts` (Simply palette) and signed **Simply · admin@usesimply.us · usesimply.us**.

@@ -5,8 +5,10 @@ export type LegalDoc = {
   sections: Array<{ heading: string; body: string[] }>
 }
 
-const contact = 'thabhelo.duve@talladega.edu'
-const site = import.meta.env.VITE_WEB_BASE ?? 'https://usesimply.us'
+import { siteUrl, supportEmail } from '../site'
+
+const contact = supportEmail
+const site = siteUrl
 
 export const privacyPolicy: LegalDoc = {
   title: 'Privacy Policy',
