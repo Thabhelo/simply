@@ -1,5 +1,6 @@
 {
   "manifest_version": 3,
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmfO9yh9G8X/qkN7t19HXftQDO9cdTurjOQvhDQXsVBpdabPxmGeNycdkyxlhVl038HiMDdye8d4CKuNlvZc1Hevyo9Bs5I3EKfmrclnadr5h0c3R5qNqJxe00M9q063ac+Ti9bkVmCgD0vW4VyKUWjpv4KCLR7mtK8ordBCCMbEem//0gP7QnX3ndm8HBD3msbFYRvjuiVh+/Ilej0viUtWPW/00xoRpm0K+flQNDlhvqpneIP5Ygjm+hN+0LQeaoh79e3ReAys3QgwCbS5i7lrooK5Rr+Vijy9e8b9/2WIpgo2byo6ZKnEzIJz9ecnGZSllnLl62nu4U1qurTttQwIDAQAB",
   "name": "Simply",
   "description": "Turn dense research papers into calm prerequisite guides.",
   "version": "0.1.0",
@@ -25,7 +26,8 @@
   },
   "permissions": ["activeTab", "scripting", "identity", "storage"],
   "host_permissions": [
-    "https://simply-api-k7ux27sa4q-uc.a.run.app/*"
+    "https://simply-api-k7ux27sa4q-uc.a.run.app/*",
+    "http://localhost:8787/*"
   ],
   "content_scripts": [
     {
@@ -65,16 +67,6 @@
         "file:///*/*.pdf"
       ],
       "js": ["content.js"],
-      "run_at": "document_idle",
-      "all_frames": false
-    },
-    {
-      "matches": [
-        "https://usesimply.us/*",
-        "https://www.usesimply.us/*",
-        "https://simply-def0f-e4e3f.web.app/*"
-      ],
-      "js": ["siteAuth.js"],
       "run_at": "document_idle"
     }
   ]

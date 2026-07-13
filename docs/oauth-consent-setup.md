@@ -46,10 +46,17 @@ If you see “access blocked” or “app not verified”, add your account as a
 
 1. Open [GCP Credentials](https://console.cloud.google.com/apis/credentials?project=simply-def0f-e4e3f).
 2. Under **OAuth 2.0 Client IDs**, copy the **Web client** ID (auto-created when the Firebase web app was registered).
-3. Edit that Web client → **Authorized redirect URIs** → add the extension redirect (from `chrome://extensions`, extension ID `jjpldcfebfpphoobponjaohplkkhkcnl`):
+3. Edit that Web client → **Authorized redirect URIs** → add the extension redirect from `chrome://extensions` (Developer mode → extension ID):
    ```text
    https://jjpldcfebfpphoobponjaohplkkhkcnl.chromiumapp.org/
    ```
+   (Dev unpacked ID, from `manifest.dev.json` `key` field.)
+
+   **Chrome Web Store ID** (`caalklhfhbfcmonmohhlkljacdfpmnah`):
+   ```text
+   https://caalklhfhbfcmonmohhlkljacdfpmnah.chromiumapp.org/
+   ```
+   Run `./scripts/add-extension-redirect-uri.sh caalklhfhbfcmonmohhlkljacdfpmnah` to copy the URI and open the GCP editor (no public gcloud API for this).
 4. Paste the client ID into `apps/extension/src/auth.ts` → `OAUTH_CLIENT_ID`.
 5. Rebuild: `npm run build --workspace apps/extension`
 

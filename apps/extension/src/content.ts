@@ -3,6 +3,13 @@ import { apiBase, webBase } from './config.js'
 import simplyUiCss from '../../../shared/simply-ui.css?inline'
 import contentWidgetCss from '../../../shared/simply-content-widget.css?inline'
 
+/** Shadow trees don't inherit page CSS; remap :root tokens and drop page-level body rules. */
+function cssForShadow(raw: string): string {
+  return raw.replace(/:root\s*\{/g, ':host {').replace(/body\s*\{[^}]*\}/g, '')
+}
+
+const shadowUiCss = cssForShadow(simplyUiCss)
+
 const FONT_LINK =
   'https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500&family=Inter+Tight:wght@400;500;600&display=swap'
 
@@ -134,26 +141,39 @@ function signInViaBackground(): Promise<{ ok: boolean; error?: string }> {
   })
 }
 
+type SimplyWindow = Window & { __simplyWidgetMounting?: boolean }
+
 function mountWidget() {
-  if (document.getElementById(widgetId) || !looksLikeResearchPaper()) {
+  const win = window as SimplyWindow
+  if (win.__simplyWidgetMounting || document.getElementById(widgetId) || !looksLikeResearchPaper()) {
     return
   }
+  win.__simplyWidgetMounting = true
 
   const host = document.createElement('div')
   host.id = widgetId
   const shadow = host.attachShadow({ mode: 'open' })
-  let collapsed = sessionStorage.getItem(collapsedKey) === '1'
+  // Default collapsed (tab only). User must click the tab to open the panel.
+  let collapsed = sessionStorage.getItem(collapsedKey) !== '0'
   let lastGuideId: string | null = null
 
   shadow.innerHTML = `
     <link rel="stylesheet" href="${FONT_LINK}" />
     <style>
       :host {
-        all: initial;
         color-scheme: light;
+        display: block;
+        height: 0;
+        overflow: visible;
+        pointer-events: none;
+        position: fixed;
+        right: 0;
+        top: 0;
+        width: 0;
+        z-index: 2147483647;
       }
 
-      ${simplyUiCss}
+      ${shadowUiCss}
       ${contentWidgetCss}
     </style>
     <button class="simply-tab hidden" id="simply-tab" type="button" aria-label="Open Simply">simply</button>

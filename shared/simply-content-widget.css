@@ -8,6 +8,7 @@
   max-height: min(72vh, 560px);
   overflow-y: auto;
   padding: 18px;
+  pointer-events: auto;
   position: fixed;
   right: 20px;
   top: 20px;
@@ -62,6 +63,7 @@
   letter-spacing: -0.04em;
   min-height: auto;
   padding: 14px 8px;
+  pointer-events: auto;
   position: fixed;
   right: 0;
   top: 50%;

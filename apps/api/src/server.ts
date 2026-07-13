@@ -11,6 +11,8 @@ import type { Prerequisite, Lesson, Guide, VisualStep, ExcalidrawElementSkeleton
 import { buildDetectInput, detectBasic, lessonsFromBasic, lessonFromPrereq, projectConcepts, nextSteps, cacheKey, filterBuildsOn, cleanDiagram, isSparseLesson } from './analysis.js'
 import { cleanExcalidrawElements } from './sketch.js'
 import { requireAuth } from './auth.js'
+import { firebaseConfigured } from './firebaseAdmin.js'
+import { getAuth } from 'firebase-admin/auth'
 import { getCachedAiGuide, getGuide, guideStoreMode, saveGuide } from './guideStore.js'
 import { guideExportUrl, renderGuidePdf, renderGuidePdfFlattened } from './pdfRender.js'
 
@@ -763,6 +765,29 @@ async function teachAll(prereqs: Prerequisite[], paperTitle: string): Promise<Le
 
 app.get('/health', (_request, response) => {
   response.json({ ok: true, service: 'simply-api' })
+})
+
+// Exchange a valid Firebase ID token (from the extension) for a custom token the web app
+// can use with signInWithCustomToken — avoids a second Google sign-in on usesimply.us.
+app.post('/api/auth/custom-token', async (request, response) => {
+  if (!firebaseConfigured) {
+    response.status(503).json({ error: 'Auth bridge unavailable.' })
+    return
+  }
+
+  const match = /^Bearer (.+)$/.exec(request.header('authorization') ?? '')
+  if (!match) {
+    response.status(401).json({ error: 'Sign in required.' })
+    return
+  }
+
+  try {
+    const decoded = await getAuth().verifyIdToken(match[1])
+    const customToken = await getAuth().createCustomToken(decoded.uid)
+    response.json({ customToken })
+  } catch {
+    response.status(401).json({ error: 'Invalid or expired session.' })
+  }
 })
 
 app.get('/api/pexels/search', async (request, response) => {

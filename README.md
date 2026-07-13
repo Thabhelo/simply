@@ -40,6 +40,14 @@ The extension runs on research-looking webpages and shows a small Simply widget 
 detects paper metadata, a known research host, an abstract, or a PDF-like page. If Chrome
 blocks direct text access, the extension can fall back to URL-based backend ingestion.
 
+## Chrome Web Store
+
+```bash
+./scripts/package-extension.sh
+```
+
+Upload zip + listing checklist: [`docs/chrome-web-store.md`](docs/chrome-web-store.md).
+
 ## API demo
 
 Ingest an arXiv URL, direct PDF URL, or research-paper webpage:
