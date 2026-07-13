@@ -1,4 +1,5 @@
 import emailjs from '@emailjs/browser'
+import { supportEmail } from './site'
 
 const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID ?? ''
 const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID ?? ''
@@ -26,16 +27,22 @@ export async function sendContactMessage(payload: {
   }
 
   const topic = TOPICS[payload.topic] ?? payload.topic
+  const subject = `[Simply] ${topic} — ${payload.name}`
 
   await emailjs.send(
     serviceId,
     templateId,
     {
-      subject: `[Simply] ${topic} — ${payload.name}`,
+      subject,
       reply_to: payload.email,
       from_name: payload.name,
       topic,
       message: payload.message,
+      // Aliases for EmailJS default Contact Us template fields
+      name: payload.name,
+      email: payload.email,
+      title: topic,
+      to_email: supportEmail,
     },
     { publicKey },
   )
