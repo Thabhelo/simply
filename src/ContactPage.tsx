@@ -85,7 +85,7 @@ export default function ContactPage() {
             <Check size={18} />
             <div>
               <strong>Message sent.</strong>
-              <p>Thanks — we&apos;ll reply to the address you provided.</p>
+              <p>Thanks, we&apos;ll reply to the address you provided.</p>
             </div>
           </div>
         ) : (
