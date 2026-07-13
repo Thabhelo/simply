@@ -6,7 +6,7 @@ export type LegalDoc = {
 }
 
 const contact = 'thabhelo.duve@talladega.edu'
-const site = 'https://simply-def0f-e4e3f.web.app'
+const site = import.meta.env.VITE_WEB_BASE ?? 'https://usesimply.us'
 
 export const privacyPolicy: LegalDoc = {
   title: 'Privacy Policy',

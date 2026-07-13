@@ -13,7 +13,7 @@
 set -euo pipefail
 
 PROJECT_ID="${GCP_PROJECT_ID:-simply-def0f-e4e3f}"
-WEB_BASE="${WEB_BASE:-https://${PROJECT_ID}.web.app}"
+WEB_BASE="${WEB_BASE:-https://usesimply.us}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
