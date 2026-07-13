@@ -9,7 +9,7 @@ Open: https://console.cloud.google.com/auth/branding?project=simply-def0f-e4e3f
 | Field | Value |
 |-------|--------|
 | App name | Simply |
-| User support email | thabhelo.duve@talladega.edu |
+| User support email | admin@usesimply.us |
 | App home page | https://usesimply.us |
 | Privacy policy | https://usesimply.us/privacy |
 | Terms of service | https://usesimply.us/terms |

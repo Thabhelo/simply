@@ -5,8 +5,10 @@ export type LegalDoc = {
   sections: Array<{ heading: string; body: string[] }>
 }
 
-const contact = 'thabhelo.duve@talladega.edu'
-const site = import.meta.env.VITE_WEB_BASE ?? 'https://usesimply.us'
+import { siteUrl, supportEmail } from '../site'
+
+const contact = supportEmail
+const site = siteUrl
 
 export const privacyPolicy: LegalDoc = {
   title: 'Privacy Policy',
@@ -18,7 +20,7 @@ export const privacyPolicy: LegalDoc = {
       heading: 'Who we are',
       body: [
         'Simply (“we”, “us”) provides a Chrome extension and website that turn dense research papers into prerequisite guides.',
-        `Questions: ${contact}. Website: ${site}.`,
+        `Questions: ${contact} or our contact form at ${site}/contact. Website: ${site}.`,
       ],
     },
     {
@@ -69,7 +71,7 @@ export const privacyPolicy: LegalDoc = {
         'You can use Simply without signing in only where the product allows basic mode; full analysis requires sign-in.',
         'Sign out from the extension or website to remove the local session.',
         'Uninstall the extension to remove its local storage.',
-        `Contact ${contact} to ask about access or deletion requests.`,
+        `Contact us at ${contact} or ${site}/contact to ask about access or deletion requests.`,
       ],
     },
     {
@@ -145,7 +147,7 @@ export const termsOfService: LegalDoc = {
     },
     {
       heading: 'Contact',
-      body: [`Questions about these Terms: ${contact}.`],
+      body: [`Questions about these Terms: ${contact} or ${site}/contact.`],
     },
   ],
 }
@@ -189,7 +191,7 @@ export const securityPage: LegalDoc = {
     {
       heading: 'Reporting issues',
       body: [
-        `If you discover a security concern, email ${contact} with steps to reproduce.`,
+        `If you discover a security concern, email ${contact} or use ${site}/contact (choose “Security concern”) with steps to reproduce.`,
         'Please do not publicly disclose active vulnerabilities before we have had a reasonable time to respond.',
       ],
     },

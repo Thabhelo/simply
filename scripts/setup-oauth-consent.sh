@@ -4,7 +4,7 @@ set -euo pipefail
 
 PROJECT_ID="${GCP_PROJECT_ID:-simply-def0f-e4e3f}"
 PROJECT_NUMBER="${GCP_PROJECT_NUMBER:-448198565907}"
-SUPPORT_EMAIL="${OAUTH_SUPPORT_EMAIL:-thabhelo.duve@talladega.edu}"
+SUPPORT_EMAIL="${OAUTH_SUPPORT_EMAIL:-admin@usesimply.us}"
 APP_HOME="${APP_HOME:-https://usesimply.us}"
 PRIVACY_URL="${PRIVACY_URL:-${APP_HOME}/privacy}"
 TERMS_URL="${TERMS_URL:-${APP_HOME}/terms}"

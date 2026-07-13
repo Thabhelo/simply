@@ -34,7 +34,12 @@ API_URL="$(gcloud run services describe "${GCP_SERVICE_NAME:-simply-api}" \
 
 echo ""
 echo "==> [2/3] Building web app (API=$API_URL, WEB=$WEB_BASE)..."
-VITE_API_BASE="$API_URL" VITE_WEB_BASE="$WEB_BASE" npm run build:web
+VITE_API_BASE="$API_URL" \
+  VITE_WEB_BASE="$WEB_BASE" \
+  VITE_EMAILJS_SERVICE_ID="${VITE_EMAILJS_SERVICE_ID:-}" \
+  VITE_EMAILJS_TEMPLATE_ID="${VITE_EMAILJS_TEMPLATE_ID:-}" \
+  VITE_EMAILJS_PUBLIC_KEY="${VITE_EMAILJS_PUBLIC_KEY:-}" \
+  npm run build:web
 
 echo ""
 echo "==> [3/3] Deploying Firebase Hosting..."

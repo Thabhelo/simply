@@ -5,6 +5,7 @@ import { privacyPolicy, securityPage, termsOfService } from './legal/content.ts'
 // visited: framer-motion (App) stays off /guide, and react-markdown + KaTeX
 // (GuidePage) stay off the landing page and library.
 const App = lazy(() => import('./App.tsx'))
+const ContactPage = lazy(() => import('./ContactPage.tsx'))
 const GuidePage = lazy(() => import('./GuidePage.tsx'))
 const LibraryPage = lazy(() => import('./LibraryPage.tsx'))
 const LegalPage = lazy(() => import('./LegalPage.tsx'))
@@ -15,6 +16,7 @@ function routeFor(path: string) {
   if (path === '/privacy') return <LegalPage doc={privacyPolicy} />
   if (path === '/terms') return <LegalPage doc={termsOfService} />
   if (path === '/security') return <LegalPage doc={securityPage} />
+  if (path === '/contact') return <ContactPage />
   return <App />
 }
 
