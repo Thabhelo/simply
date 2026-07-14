@@ -1,7 +1,16 @@
-import { authedFetch, NotSignedInError } from './auth.js'
+import {
+  AUTH_STORAGE_KEY,
+  authedFetch,
+  ensureValidSession,
+  LAST_ERROR_KEY,
+  NotSignedInError,
+  type SessionProfile,
+} from './auth.js'
 import { apiBase, webBase } from './config.js'
+import { authHeaderHtml, panelCardHtml } from './panelTemplate.js'
 import simplyUiCss from '../../../shared/simply-ui.css?inline'
 import contentWidgetCss from '../../../shared/simply-content-widget.css?inline'
+import extensionAuthCss from '../../../shared/simply-extension-auth.css?inline'
 
 /** Shadow trees don't inherit page CSS; remap :root tokens and drop page-level body rules. */
 function cssForShadow(raw: string): string {
@@ -47,6 +56,7 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
 }
+
 const widgetId = 'simply-research-widget'
 const collapsedKey = 'simply-widget-collapsed'
 
@@ -141,6 +151,21 @@ function signInViaBackground(): Promise<{ ok: boolean; error?: string }> {
   })
 }
 
+function avatarInitial(profile: SessionProfile): string {
+  const fromName = profile.displayName?.trim()?.[0]
+  if (fromName) return fromName.toUpperCase()
+  const fromEmail = profile.email?.trim()?.[0]
+  return fromEmail ? fromEmail.toUpperCase() : '?'
+}
+
+function displayLabel(profile: SessionProfile): string {
+  const name = profile.displayName?.trim()
+  if (name) return name
+  const email = profile.email?.trim()
+  if (email) return email.split('@')[0] ?? email
+  return 'Signed in'
+}
+
 type SimplyWindow = Window & { __simplyWidgetMounting?: boolean }
 
 function mountWidget() {
@@ -153,9 +178,9 @@ function mountWidget() {
   const host = document.createElement('div')
   host.id = widgetId
   const shadow = host.attachShadow({ mode: 'open' })
-  // Default collapsed (tab only). User must click the tab to open the panel.
   let collapsed = sessionStorage.getItem(collapsedKey) !== '0'
   let lastGuideId: string | null = null
+  let signedIn = false
 
   shadow.innerHTML = `
     <link rel="stylesheet" href="${FONT_LINK}" />
@@ -175,27 +200,15 @@ function mountWidget() {
 
       ${shadowUiCss}
       ${contentWidgetCss}
+      ${extensionAuthCss}
     </style>
     <button class="simply-tab hidden" id="simply-tab" type="button" aria-label="Open Simply">simply</button>
     <section class="simply-panel" aria-label="Simply">
-      <div class="simply-panel-head">
-        <span class="brand">simply</span>
+      <div class="simply-panel-top">
+        ${authHeaderHtml()}
         <button class="simply-close" id="simply-close" type="button" aria-label="Close">×</button>
       </div>
-      <div class="window-bar" aria-hidden="true">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-      <span class="tiny-pill">Prerequisite guide</span>
-      <h2 class="simply-title">Build a calm reading guide for this paper.</h2>
-      <p class="simply-copy">Simply reads what you have open and maps the background you need for a first pass.</p>
-      <div class="simply-actions">
-        <button class="button primary" id="simply-analyze" type="button">Analyze</button>
-      </div>
-      <p class="simply-status" id="simply-status" role="status"></p>
-      <div class="simply-results" id="simply-results"></div>
-      <button class="button primary simply-open-btn" id="simply-open" type="button" hidden>Reopen guide</button>
+      ${panelCardHtml('Analyze this paper')}
     </section>
   `
 
@@ -208,6 +221,12 @@ function mountWidget() {
   const openButton = shadow.querySelector<HTMLButtonElement>('#simply-open')
   const statusEl = shadow.querySelector<HTMLElement>('#simply-status')
   const resultsEl = shadow.querySelector<HTMLElement>('#simply-results')
+  const authSlot = shadow.querySelector<HTMLElement>('#simply-auth-slot')
+  const signInButton = shadow.querySelector<HTMLButtonElement>('#simply-signin')
+  const signOutButton = shadow.querySelector<HTMLButtonElement>('#simply-signout')
+  const avatarEl = shadow.querySelector<HTMLElement>('#simply-avatar')
+  const authLabelEl = shadow.querySelector<HTMLElement>('#simply-auth-label')
+  const authHintEl = shadow.querySelector<HTMLElement>('#simply-auth-hint')
 
   function setCollapsed(next: boolean) {
     collapsed = next
@@ -216,13 +235,68 @@ function mountWidget() {
     tab?.classList.toggle('hidden', !collapsed)
   }
 
+  function renderAvatar(profile: SessionProfile) {
+    if (!avatarEl) return
+    avatarEl.replaceChildren()
+    if (profile.photoURL) {
+      const img = document.createElement('img')
+      img.src = profile.photoURL
+      img.alt = ''
+      img.referrerPolicy = 'no-referrer'
+      img.addEventListener('error', () => {
+        avatarEl.textContent = avatarInitial(profile)
+      })
+      avatarEl.append(img)
+      return
+    }
+    avatarEl.textContent = avatarInitial(profile)
+  }
+
+  function setAuthState(state: 'loading' | 'signed-out' | 'signed-in', profile?: SessionProfile) {
+    signedIn = state === 'signed-in'
+    if (authSlot) authSlot.dataset.state = state
+    if (signInButton) signInButton.disabled = state === 'loading'
+    if (analyzeButton) analyzeButton.disabled = !signedIn
+    if (authHintEl) authHintEl.hidden = signedIn
+
+    if (state === 'signed-in' && profile) {
+      renderAvatar(profile)
+      if (authLabelEl) {
+        authLabelEl.textContent = displayLabel(profile)
+        authLabelEl.title = profile.email ?? profile.displayName ?? 'Signed in'
+      }
+      if (signOutButton) signOutButton.title = profile.email ?? 'Sign out'
+    } else if (avatarEl) {
+      avatarEl.replaceChildren()
+      if (authLabelEl) authLabelEl.textContent = ''
+    }
+  }
+
+  async function refreshAuthUi() {
+    setAuthState('loading')
+    const profile = await ensureValidSession()
+    if (profile) {
+      setAuthState('signed-in', profile)
+      return
+    }
+    setAuthState('signed-out')
+    const stored = await chrome.storage.local.get(LAST_ERROR_KEY)
+    const lastError = stored[LAST_ERROR_KEY] as string | undefined
+    if (lastError && statusEl) statusEl.textContent = lastError
+  }
+
   setCollapsed(collapsed)
 
-  tab?.addEventListener('click', () => setCollapsed(false))
   closeButton?.addEventListener('click', () => setCollapsed(true))
+
+  tab?.addEventListener('click', () => setCollapsed(false))
 
   async function runAnalyze() {
     if (!statusEl || !resultsEl || !analyzeButton || !openButton) return
+    if (!signedIn) {
+      statusEl.textContent = 'Sign in with Google first.'
+      return
+    }
 
     analyzeButton.disabled = true
     openButton.hidden = true
@@ -255,23 +329,40 @@ function mountWidget() {
       }
     } catch (error) {
       if (error instanceof NotSignedInError) {
-        statusEl.textContent = 'Opening sign-in...'
-        const signIn = await signInViaBackground()
-        if (signIn.ok) {
-          statusEl.textContent = 'Signed in. Analyzing...'
-          await runAnalyze()
-          return
-        }
-        statusEl.textContent = signIn.error ?? 'Sign-in failed.'
+        await refreshAuthUi()
+        statusEl.textContent = 'Your session expired. Sign in again.'
       } else {
         statusEl.textContent = error instanceof Error ? error.message : 'Could not reach the Simply API.'
       }
     } finally {
-      analyzeButton.disabled = false
+      analyzeButton.disabled = !signedIn
     }
   }
 
   analyzeButton?.addEventListener('click', () => void runAnalyze())
+
+  signInButton?.addEventListener('click', () => {
+    if (!signInButton || signInButton.disabled || !statusEl) return
+    signInButton.disabled = true
+    statusEl.textContent = 'Choose your Google account in the window that opens…'
+    void signInViaBackground().then(async (result) => {
+      if (result.ok) {
+        await refreshAuthUi()
+        statusEl.textContent = 'Signed in. You can analyze this paper now.'
+      } else {
+        signInButton.disabled = false
+        statusEl.textContent = result.error ?? 'Sign-in failed.'
+      }
+    })
+  })
+
+  signOutButton?.addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'SIMPLY_SIGN_OUT' }, async () => {
+      await refreshAuthUi()
+      if (resultsEl) resultsEl.innerHTML = ''
+      if (statusEl) statusEl.textContent = 'Signed out.'
+    })
+  })
 
   openButton?.addEventListener('click', () => {
     if (!statusEl || !openButton) return
@@ -282,6 +373,15 @@ function mountWidget() {
     window.open(`${webBase}/guide?id=${encodeURIComponent(lastGuideId)}`, '_blank', 'noopener')
     statusEl.textContent = 'Guide opened in a new tab.'
   })
+
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return
+    if (changes[AUTH_STORAGE_KEY] || changes[LAST_ERROR_KEY]) {
+      void refreshAuthUi()
+    }
+  })
+
+  void refreshAuthUi()
 }
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {

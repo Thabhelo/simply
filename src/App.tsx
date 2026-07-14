@@ -12,7 +12,7 @@ import './App.css'
 
 const CHROME_STORE_URL =
   import.meta.env.VITE_CHROME_STORE_URL ??
-  'https://chromewebstore.google.com/detail/simply-prerequisite-guides/simply'
+  'https://chromewebstore.google.com/detail/simply/caalklhfhbfcmonmohhlkljacdfpmnah'
 
 const ease = [0.22, 1, 0.36, 1] as const
 const titleLines = ['Read hard papers', 'with a calmer mind.']

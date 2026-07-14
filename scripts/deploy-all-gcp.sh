@@ -39,6 +39,7 @@ VITE_API_BASE="$API_URL" \
   VITE_EMAILJS_SERVICE_ID="${VITE_EMAILJS_SERVICE_ID:-}" \
   VITE_EMAILJS_TEMPLATE_ID="${VITE_EMAILJS_TEMPLATE_ID:-}" \
   VITE_EMAILJS_PUBLIC_KEY="${VITE_EMAILJS_PUBLIC_KEY:-}" \
+  VITE_CHROME_STORE_URL="${VITE_CHROME_STORE_URL:-https://chromewebstore.google.com/detail/simply/caalklhfhbfcmonmohhlkljacdfpmnah}" \
   npm run build:web
 
 echo ""
