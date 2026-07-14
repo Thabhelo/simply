@@ -41,11 +41,15 @@ blocks direct text access, the extension can fall back to URL-based backend inge
 
 ## Chrome Web Store
 
+The extension is published on Chrome Web Store. To package a new version:
+
 ```bash
 npm run package:extension
 ```
 
 Output: `public/simply-chrome-extension-<version>.zip`
+
+**Important**: After publishing, configure OAuth redirects for Google sign-in to work. See [`docs/CHROME_EXTENSION_OAUTH_SETUP.md`](docs/CHROME_EXTENSION_OAUTH_SETUP.md) for setup instructions.
 
 ## API demo
 

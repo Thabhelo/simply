@@ -14,6 +14,9 @@ const FIREBASE_API_KEY = 'AIzaSyCyTAL65fgRCiXUHay-Crx4WzbfIYS36KI'
 // OAuth 2.0 Web client ID for project simply-def0f-e4e3f. After enabling Google sign-in in
 // Firebase Console, copy the "Web client" ID from GCP → APIs & Services → Credentials and
 // add your extension redirect URI (https://<extension-id>.chromiumapp.org/).
+//
+// IMPORTANT: After publishing to Chrome Web Store, you MUST add the OAuth redirect URI
+// to your GCP credentials. See docs/CHROME_EXTENSION_OAUTH_SETUP.md for complete setup.
 const OAUTH_CLIENT_ID = '448198565907-0nokihgt4021fl9knk7qlq6v9k30lj7v.apps.googleusercontent.com'
 
 export const AUTH_STORAGE_KEY = 'simply-auth'
