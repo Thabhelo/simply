@@ -8,11 +8,8 @@ import {
 } from 'lucide-react'
 import AuthButton from './AuthButton'
 import MagneticButton from './MagneticButton'
+import { chromeStoreUrl } from './site'
 import './App.css'
-
-const CHROME_STORE_URL =
-  import.meta.env.VITE_CHROME_STORE_URL ??
-  'https://chromewebstore.google.com/detail/simply/caalklhfhbfcmonmohhlkljacdfpmnah'
 
 const ease = [0.22, 1, 0.36, 1] as const
 const titleLines = ['Read hard papers', 'with a calmer mind.']
@@ -86,7 +83,7 @@ function App() {
         <div className="landing-nav-end">
           <MagneticButton
             circleColor="rgba(255,255,255,0.15)"
-            href={CHROME_STORE_URL}
+            href={chromeStoreUrl}
             className="landing-nav-cta"
           >
             Get the extension
@@ -170,7 +167,7 @@ function App() {
           >
             <MagneticButton
               circleColor="rgba(255,255,255,0.15)"
-              href={CHROME_STORE_URL}
+              href={chromeStoreUrl}
               className="landing-btn landing-btn-primary landing-cta-pulse"
             >
               Get the extension
@@ -291,7 +288,7 @@ function App() {
             prerequisite guide in minutes.
           </p>
           <MagneticButton
-            href={CHROME_STORE_URL}
+            href={chromeStoreUrl}
             className="landing-btn landing-btn-primary landing-launch-cta"
           >
             Get the Chrome extension

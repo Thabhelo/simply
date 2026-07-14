@@ -4,6 +4,7 @@ import { BookOpen, Home, Library, Search } from 'lucide-react'
 import { signInWithGoogle, watchAuth, userInitial } from './auth'
 import { fetchPexelsImage } from './pexels'
 import { imageQueryForPaper, loadPaperHistory, type PaperHistoryEntry } from './paperHistory'
+import { chromeStoreUrl } from './site'
 import './LibraryPage.css'
 
 type ImageMap = Record<string, string>
@@ -185,7 +186,7 @@ export default function LibraryPage() {
               <div className="library-empty">
                 <h1>No papers yet</h1>
                 <p>Analyze a paper with the Simply extension and your guides will appear here.</p>
-                <a className="library-primary-btn" href="/">Install the extension</a>
+                <a className="library-primary-btn" href={chromeStoreUrl} target="_blank" rel="noopener noreferrer">Install the extension</a>
               </div>
             )}
           </section>

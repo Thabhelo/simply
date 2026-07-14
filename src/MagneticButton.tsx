@@ -109,8 +109,14 @@ export default function MagneticButton({
   }
 
   if (href) {
+    const external = href.startsWith('http')
     return (
-      <a href={href} onClick={onClick} {...sharedProps}>
+      <a
+        href={href}
+        {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+        onClick={onClick}
+        {...sharedProps}
+      >
         {sharedProps.children}
       </a>
     )
