@@ -1,49 +1,55 @@
-import { useState, type FormEvent } from 'react'
-import { ArrowLeft, Check, LoaderCircle, Mail } from 'lucide-react'
-import { isContactFormReady, sendContactMessage } from './contact'
-import { supportEmail } from './site'
-import './LegalPage.css'
+import { Recaptcha } from "./Recaptcha";
+import { useState, type FormEvent } from "react";
+import { ArrowLeft, Check, LoaderCircle, Mail } from "lucide-react";
+import { isContactFormReady, sendContactMessage } from "./contact";
+import { supportEmail } from "./site";
+import "./LegalPage.css";
 
-type FormState = 'idle' | 'submitting' | 'success' | 'error'
+type FormState = "idle" | "submitting" | "success" | "error";
 
 const TOPICS = [
-  { value: 'general', label: 'General question' },
-  { value: 'feedback', label: 'Product feedback' },
-  { value: 'bug', label: 'Bug report' },
-  { value: 'security', label: 'Security concern' },
-] as const
+  { value: "general", label: "General question" },
+  { value: "feedback", label: "Product feedback" },
+  { value: "bug", label: "Bug report" },
+  { value: "security", label: "Security concern" },
+] as const;
 
 export default function ContactPage() {
-  const [state, setState] = useState<FormState>('idle')
-  const [error, setError] = useState('')
-  const formReady = isContactFormReady()
+  const [state, setState] = useState<FormState>("idle");
+  const [error, setError] = useState("");
+  const formReady = isContactFormReady();
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (state === 'submitting') return
+    event.preventDefault();
+    if (state === "submitting") return;
 
-    const form = event.currentTarget
-    const data = new FormData(form)
-    if (String(data.get('website') ?? '').trim()) {
-      setState('success')
-      return
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    if (String(data.get("website") ?? "").trim()) {
+      setState("success");
+      return;
     }
 
-    setState('submitting')
-    setError('')
+    setState("submitting");
+    setError("");
 
     try {
       await sendContactMessage({
-        name: String(data.get('name') ?? '').trim(),
-        email: String(data.get('email') ?? '').trim(),
-        topic: String(data.get('topic') ?? 'general'),
-        message: String(data.get('message') ?? '').trim(),
-      })
-      form.reset()
-      setState('success')
+        token: String(data.get("g-recaptcha-response") || ""),
+        name: String(data.get("name") ?? "").trim(),
+        email: String(data.get("email") ?? "").trim(),
+        topic: String(data.get("topic") ?? "general"),
+        message: String(data.get("message") ?? "").trim(),
+      });
+      form.reset();
+      setState("success");
     } catch (submitError) {
-      setState('error')
-      setError(submitError instanceof Error ? submitError.message : 'Could not send your message.')
+      setState("error");
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Could not send your message.",
+      );
     }
   }
 
@@ -68,19 +74,20 @@ export default function ContactPage() {
         <p className="legal-updated">We read every message</p>
         <h1>Contact</h1>
         <p className="legal-summary">
-          Questions about Simply, the extension, your account, or a security issue? Send a note
-          below. For urgent security reports, choose “Security concern”.
+          Questions about Simply, the extension, your account, or a security
+          issue? Send a note below. For urgent security reports, choose
+          “Security concern”.
         </p>
 
         <div className="contact-direct">
           <Mail size={16} aria-hidden />
           <span>
-            Prefer email? Write to{' '}
+            Prefer email? Write to{" "}
             <a href={`mailto:${supportEmail}`}>{supportEmail}</a>
           </span>
         </div>
 
-        {state === 'success' ? (
+        {state === "success" ? (
           <div className="contact-status contact-status-success" role="status">
             <Check size={18} />
             <div>
@@ -89,7 +96,10 @@ export default function ContactPage() {
             </div>
           </div>
         ) : (
-          <form className="contact-form" onSubmit={(event) => void handleSubmit(event)}>
+          <form
+            className="contact-form"
+            onSubmit={(event) => void handleSubmit(event)}
+          >
             {!formReady ? (
               <p className="contact-unconfigured" role="status">
                 The web form is not live yet. Please use the email link above.
@@ -98,12 +108,24 @@ export default function ContactPage() {
 
             <label>
               Name
-              <input name="name" type="text" required autoComplete="name" maxLength={120} />
+              <input
+                name="name"
+                type="text"
+                required
+                autoComplete="name"
+                maxLength={120}
+              />
             </label>
 
             <label>
               Email
-              <input name="email" type="email" required autoComplete="email" maxLength={254} />
+              <input
+                name="email"
+                type="email"
+                required
+                autoComplete="email"
+                maxLength={254}
+              />
             </label>
 
             <label>
@@ -129,25 +151,38 @@ export default function ContactPage() {
               />
             </label>
 
-            <label className="contact-honeypot" aria-hidden="true" tabIndex={-1}>
+            <label
+              className="contact-honeypot"
+              aria-hidden="true"
+              tabIndex={-1}
+            >
               Website
-              <input name="website" type="text" tabIndex={-1} autoComplete="off" />
+              <input
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+              />
             </label>
 
-            {state === 'error' ? (
+            {state === "error" ? (
               <p className="contact-error" role="alert">
                 {error}
               </p>
             ) : null}
 
-            <button type="submit" disabled={state === 'submitting' || !formReady}>
-              {state === 'submitting' ? (
+            <Recaptcha state={state} />
+            <button
+              type="submit"
+              disabled={state === "submitting" || !formReady}
+            >
+              {state === "submitting" ? (
                 <>
                   <LoaderCircle size={16} className="contact-spinner" />
                   Sending…
                 </>
               ) : (
-                'Send message'
+                "Send message"
               )}
             </button>
           </form>
@@ -162,5 +197,5 @@ export default function ContactPage() {
         <a href="/">Home</a>
       </footer>
     </main>
-  )
+  );
 }
